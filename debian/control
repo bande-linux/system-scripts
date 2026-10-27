@@ -1,0 +1,17 @@
+Source: unbound-scripts
+Section: admin
+Priority: optional
+Maintainer: Mikael Hug <mikaelhug@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/unbound-linux/system-scripts
+
+Package: unbound-scripts
+Architecture: all
+Depends: ${misc:Depends}, busybox, cpio, initramfs-tools, mount
+Recommends: unbound-fwextract
+Description: Unbound Linux system scripts for Apple Silicon Macs
+ Loads vendor firmware from the EFI system partition in the initramfs,
+ updates firmware and the unboot image on the EFI system partition, and
+ collects a diagnostic dump.

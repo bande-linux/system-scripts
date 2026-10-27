@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	$(MAKE) PREFIX=/usr
+
+override_dh_auto_install:
+	$(MAKE) install-debian PREFIX=/usr DESTDIR=$(CURDIR)/debian/unbound-scripts
