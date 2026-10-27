@@ -1,0 +1,53 @@
+name: deb
+
+on:
+  push:
+    branches: [ main, 'prep/**' ]
+  workflow_dispatch:
+
+jobs:
+  deb:
+    runs-on: [self-hosted, unbound]
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the package on Debian 13
+        run: |
+          mkdir -p out
+          git archive --prefix=src/ HEAD | docker run --rm -i debian:trixie sh -euc '
+            apt-get update -qq
+            apt-get install -y -qq --no-install-recommends build-essential debhelper lintian >/dev/null
+            tar -x -C /tmp
+            cd /tmp/src
+            dpkg-buildpackage -us -uc -b >&2
+            lintian --fail-on error --suppress-tags no-copyright-file ../*.deb >&2
+            cd /tmp && tar -c *.deb' | tar -x -C out
+          ls -l out
+
+      - name: Install it on Debian 13 and build an initramfs
+        run: |
+          tar -c -C out . | docker run --rm -i debian:trixie sh -euc '
+            mkdir /tmp/debs
+            tar -x -C /tmp/debs
+            apt-get update -qq
+            apt-get install -y -qq --no-install-recommends linux-image-arm64 /tmp/debs/*.deb >/dev/null
+            version=$(ls /lib/modules)
+            update-initramfs -c -k "$version" >/dev/null 2>&1 || update-initramfs -u -k "$version"
+            lsinitramfs /boot/initrd.img-$version > /tmp/list
+            for f in usr/share/initramfs-tools/scripts/init-premount/unbound \
+                     scripts/init-premount/unbound scripts/init-bottom/unbound \
+                     usr/share/unbound-scripts/functions.sh usr/bin/cpio usr/lib/firmware/vendor; do
+              grep -qx "$f" /tmp/list && echo "present: $f" || echo "absent: $f"
+            done
+            grep -qx scripts/init-premount/unbound /tmp/list
+            grep -qx scripts/init-bottom/unbound /tmp/list
+            grep -qx usr/share/unbound-scripts/functions.sh /tmp/list
+            grep -qx usr/lib/firmware/vendor /tmp/list
+            unbound-diagnose - | sed -n "/## Package versions/,/^\$/p"'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: unbound-scripts-deb
+          path: out/*.deb
