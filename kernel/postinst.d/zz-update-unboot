@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+version="$1"
+
+[ -x /usr/bin/update-unboot ] || exit 0
+[ -e /usr/lib/unboot/unboot.bin ] || exit 0
+[ -d "/usr/lib/linux-image-$version" ] || exit 0
+
+DTBS="${DTBS:-/usr/lib/linux-image-$version}" exec /usr/bin/update-unboot

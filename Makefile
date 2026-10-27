@@ -71,6 +71,18 @@ install-arch: install install-mkinitcpio install-macsmc-battery install-udev-hwd
 
 install-fedora: install install-dracut install-macsmc-battery install-udev-hwdb
 
+install-initramfs-tools: install
+	install -dD $(DESTDIR)$(PREFIX)/share/initramfs-tools/hooks
+	install -m0755 -t $(DESTDIR)$(PREFIX)/share/initramfs-tools/hooks initramfs-tools/hooks/unbound
+	install -dD $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-premount
+	install -m0755 -t $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-premount initramfs-tools/scripts/init-premount/unbound
+	install -dD $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-bottom
+	install -m0755 -t $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-bottom initramfs-tools/scripts/init-bottom/unbound
+
+install-debian: install install-initramfs-tools install-macsmc-battery install-udev-hwdb
+	install -dD $(DESTDIR)/etc/kernel/postinst.d
+	install -m0755 -t $(DESTDIR)/etc/kernel/postinst.d kernel/postinst.d/zz-update-unboot
+
 uninstall:
 	rm -f $(addprefix $(DESTDIR)$(BIN_DIR)/,$(SCRIPTS))
 	rm -rf $(DESTDIR)$(PREFIX)/share/unbound-scripts
@@ -98,6 +110,14 @@ uninstall-arch: uninstall-mkinitcpio uninstall-macsmc-battery uninstall-udev-hwd
 
 uninstall-fedora: uninstall-dracut uninstall-macsmc-battery uninstall-udev-hwdb
 
+uninstall-initramfs-tools:
+	rm -f $(DESTDIR)$(PREFIX)/share/initramfs-tools/hooks/unbound
+	rm -f $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-premount/unbound
+	rm -f $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-bottom/unbound
+
+uninstall-debian: uninstall-initramfs-tools uninstall-macsmc-battery uninstall-udev-hwdb
+	rm -f $(DESTDIR)/etc/kernel/postinst.d/zz-update-unboot
+
 .PHONY: clean \
         install \
         install-mkinitcpio \
@@ -106,10 +126,14 @@ uninstall-fedora: uninstall-dracut uninstall-macsmc-battery uninstall-udev-hwdb
         install-udev-hwdb \
         install-arch \
         install-fedora \
+        install-initramfs-tools \
+        install-debian \
         uninstall \
         uninstall-mkinitcpio \
         uninstall-dracut \
         uninstall-macsmc-battery \
         uninstall-udev-hwdb \
         uninstall-arch \
-        uninstall-fedora
+        uninstall-fedora \
+        uninstall-initramfs-tools \
+        uninstall-debian

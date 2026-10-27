@@ -1,0 +1,41 @@
+#!/bin/sh
+
+PREREQ="udev"
+prereqs() { echo "$PREREQ"; }
+case "$1" in
+prereqs) prereqs; exit 0 ;;
+esac
+
+. /scripts/functions
+
+[ -e /vendorfw ] && exit 0
+
+if [ ! -e /proc/device-tree/chosen/unbound,efi-system-partition ]; then
+    log_warning_msg "Unbound: no unbound,efi-system-partition in the device tree, vendor firmware not loaded"
+    exit 0
+fi
+
+modprobe -q apple-mailbox
+modprobe -q nvme-apple
+
+esp_uuid="$(tr -d '\000' < /proc/device-tree/chosen/unbound,efi-system-partition)"
+for i in $(seq 0 50); do
+    [ -e "/dev/disk/by-partuuid/$esp_uuid" ] && break
+    sleep 0.1
+done
+if [ ! -e "/dev/disk/by-partuuid/$esp_uuid" ]; then
+    log_failure_msg "Unbound: EFI system partition $esp_uuid not found"
+    exit 0
+fi
+
+if ! (. /usr/share/unbound-scripts/functions.sh; mount_sys_esp /run/.system-efi); then
+    log_failure_msg "Unbound: cannot mount EFI system partition $esp_uuid"
+    exit 0
+fi
+
+if [ -e /run/.system-efi/vendorfw/firmware.cpio ]; then
+    (cd / && cpio --quiet -i < /run/.system-efi/vendorfw/firmware.cpio)
+else
+    log_warning_msg "Unbound: no vendor firmware on the EFI system partition"
+fi
+umount /run/.system-efi
