@@ -103,6 +103,10 @@ package_versions() {
             fedora-unbound-remix-scripts tiny-dfr uboot-images-armv8 kernel-16k
             kernel-16k-modules-extra unbound-fwextract dracut-unbound update-unboot
             unbound-audio speakersafetyd wireplumber pipewire mesa"
+    elif [ -e /etc/debian_version ]; then
+      cmd="dpkg-query -W"
+      pkgs="unbound-scripts unbound-nvram unbound-bless unbound-fwextract
+            linux-image-$(uname -r) initramfs-tools systemd"
     else
       echo "Distribution not supported"
       return
@@ -228,6 +232,13 @@ diagnose() {
             echo "required platform dependencies. See https://discussion.fedoraproject.org/t/95301"
             echo "for how to fix it."
         fi
+    fi
+
+    if [ -e /etc/debian_version ] && [ "$(getconf PAGESIZE)" != 16384 ]; then
+        echo
+        echo "** WARNING! **"
+        echo "Your system is not running a 16k page kernel. This is unsupported and will not"
+        echo "work properly."
     fi
 }
 
