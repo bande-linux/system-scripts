@@ -1,0 +1,12 @@
+[Trigger]
+Type = Path
+Operation = Install
+Operation = Upgrade
+Target = usr/lib/modules/*/dtbs/*
+Target = usr/lib/unbound-boot/*
+
+[Action]
+Description = Updating unboot image...
+When = PostTransaction
+Exec = /usr/bin/update-unboot
+NeedsTargets

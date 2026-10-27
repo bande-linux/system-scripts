@@ -1,0 +1,77 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+
+set -e
+
+[ -e /etc/default/update-unboot ] && . /etc/default/update-unboot
+
+[ -n "$UNBOOT_UPDATE_DISABLED" ] && exit 0
+
+if [ -e "$(dirname "$0")"/functions.sh ]; then
+    . "$(dirname "$0")"/functions.sh
+else
+    . /usr/share/unbound-scripts/functions.sh
+fi
+
+: ${SOURCE:="/usr/lib/unboot/"}
+: ${UNBOOT:="$SOURCE/unboot.bin"}
+: ${U_BOOT:="$SOURCE/u-boot-nodtb.bin"}
+: ${TARGET:="$1"}
+: ${CONFIG:=/etc/unboot.conf}
+
+if [ -z "$DTBS" ]; then
+    warn "ERROR: DTBS config unset or empty, see `/etc/default/update-unboot`"
+    exit 1
+fi
+
+# If ${DTBS} is a directory expand it to include dtbs from all Apple silicon
+# macs.
+if [ -d "$DTBS" ]; then
+    DTBS="${DTBS}/apple/t6*.dtb ${DTBS}/apple/t81*.dtb"
+fi
+
+umount=false
+
+unbootconfig=/run/unboot.conf
+>"$unbootconfig"
+
+if [ -e "$CONFIG" ]; then
+    info "Reading unboot config from $CONFIG:"
+    while read line; do
+        case "$line" in
+            "") ;;
+            \#*) ;;
+            chosen.*=*|display=*|mitigations=*)
+                echo "$line" >> "$unbootconfig"
+                info "  Option: $line"
+                ;;
+            *)
+                warn "  Ignoring unknown option: $line"
+                ;;
+        esac
+    done <$CONFIG
+fi
+
+if [ -z "$TARGET" ]; then
+    mount_sys_esp /run/.system-efi
+    TARGET="/run/.system-efi/unboot/boot.bin"
+    umount=true
+fi
+
+cat "$UNBOOT" $DTBS >"${TARGET}.new"
+gzip -c "$U_BOOT" >>"${TARGET}.new"
+cat "$unbootconfig" >>"${TARGET}.new"
+
+if [ -e "$TARGET" ]; then
+    # clobber "${TARGET}.old" only if "$TARGET" changes, use sha512sum to
+    # avoid dependency on diffutils
+    SHA512_CUR=$(sha512sum "$TARGET"     | cut -d' ' -f1)
+    SHA512_NEW=$(sha512sum "$TARGET.new" | cut -d' ' -f1)
+    [ "$SHA512_CUR" != "$SHA512_NEW" ] && cp --preserve=timestamps -f "$TARGET" "${TARGET}.old"
+fi
+
+mv -f "${TARGET}.new" "$TARGET"
+
+echo "unboot updated at ${TARGET}"
+$umount && umount /run/.system-efi
+true
