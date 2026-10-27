@@ -28,7 +28,8 @@ if [ ! -e "/dev/disk/by-partuuid/$esp_uuid" ]; then
     exit 0
 fi
 
-if ! (. /usr/share/unbound-scripts/functions.sh; mount_sys_esp /run/.system-efi); then
+(. /usr/share/unbound-scripts/functions.sh; mount_sys_esp /run/.system-efi) || true
+if ! grep -q " /run/.system-efi " /proc/mounts; then
     log_failure_msg "Unbound: cannot mount EFI system partition $esp_uuid"
     exit 0
 fi

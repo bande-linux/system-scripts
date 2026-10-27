@@ -13,7 +13,7 @@ manual_add_modules apple-mailbox nvme-apple pinctrl-apple-gpio macsmc macsmc-rtk
     nvmem-apple-efuses phy-apple-atc xhci-plat-hcd xhci-pci pcie-apple gpio_macsmc \
     spi-apple spi-hid-apple spi-hid-apple-of rtc-macsmc simple-mfd-spmi \
     spmi-apple-controller nvmem_spmi_mfd apple-dockchannel dockchannel-hid \
-    apple-rtkit-helper vfat nls_cp437 nls_iso8859-1
+    apple-rtkit-helper vfat nls_cp437 nls_iso8859-1 nls_ascii nls_utf8
 
 copy_exec /usr/bin/cpio /usr/bin
 copy_exec /usr/bin/mount /usr/bin
