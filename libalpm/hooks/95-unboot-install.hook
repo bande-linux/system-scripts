@@ -3,7 +3,7 @@ Type = Path
 Operation = Install
 Operation = Upgrade
 Target = usr/lib/modules/*/dtbs/*
-Target = usr/lib/unbound-boot/*
+Target = usr/lib/unboot/*
 
 [Action]
 Description = Updating unboot image...
