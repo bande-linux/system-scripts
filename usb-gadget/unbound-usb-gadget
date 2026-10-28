@@ -1,7 +1,7 @@
 #!/bin/sh
 # Usage: unbound-usb-gadget <udc>
 # Exposes CDC-NCM and CDC-ACM on a USB device controller, for the USB-C link to a
-# development Mac; unbound-usb-gadget.network serves DHCP on the NCM interface.
+# development Mac, and serves DHCP on 10.84.N.0/24, N being the controller's index.
 set -eu
 udc=$1
 g=/sys/kernel/config/usb_gadget/unbound-$udc
@@ -21,6 +21,11 @@ echo Unbound > "$g/strings/0x409/manufacturer"
 echo "$(tr -d '\0' < /proc/device-tree/model 2>/dev/null || echo Unbound)" > "$g/strings/0x409/product"
 echo "$serial-$udc" > "$g/strings/0x409/serialnumber"
 echo "ncm acm" > "$g/configs/c.1/strings/0x409/configuration"
+n=$(ls /sys/class/udc | grep -n -x -F "$udc" | cut -d: -f1)
+mkdir -p /run/systemd/network
+printf '[Match]\nMACAddress=02:%s10\n\n[Network]\nAddress=10.84.%s.1/24\nDHCPServer=yes\n\n[DHCPServer]\nPoolOffset=10\nPoolSize=11\n\n[Link]\nRequiredForOnline=no\n' \
+    "$h" $((n - 1)) > "/run/systemd/network/80-unbound-usb-gadget-$udc.network"
+networkctl reload 2>/dev/null || true
 echo "02:${h}10" > "$g/functions/ncm.usb/dev_addr"
 echo "02:${h}11" > "$g/functions/ncm.usb/host_addr"
 ln -s "$g/functions/ncm.usb" "$g/configs/c.1/"
