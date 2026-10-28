@@ -1,0 +1,4 @@
+usr/bin/unbound-usb-gadget
+usr/lib/systemd/system/unbound-usb-gadget@.service
+usr/lib/udev/rules.d/80-unbound-usb-gadget.rules
+usr/lib/systemd/network/80-unbound-usb-gadget.network

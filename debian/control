@@ -15,3 +15,11 @@ Description: Unbound Linux system scripts for Apple Silicon Macs
  Loads vendor firmware from the EFI system partition in the initramfs,
  updates firmware and the unboot image on the EFI system partition, and
  collects a diagnostic dump.
+
+Package: unbound-usb-gadget
+Architecture: all
+Depends: ${misc:Depends}, systemd, kmod
+Description: USB-C gadget link from an Apple Silicon Mac to a development Mac
+ Exposes CDC-NCM and CDC-ACM on the Mac's USB device controllers, serves
+ DHCP on the NCM interface with systemd-networkd and starts a getty on the
+ gadget serial port.
