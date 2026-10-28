@@ -1,0 +1,2 @@
+SUBSYSTEM=="udc", ACTION=="add", TAG+="systemd", ENV{SYSTEMD_WANTS}+="unbound-usb-gadget@%k.service"
+SUBSYSTEM=="tty", KERNEL=="ttyGS[0-9]*", ACTION=="add", TAG+="systemd", ENV{SYSTEMD_WANTS}+="serial-getty@%k.service"

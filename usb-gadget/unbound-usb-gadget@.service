@@ -1,0 +1,9 @@
+[Unit]
+Description=USB-C gadget link on %i
+Requires=sys-kernel-config.mount
+After=sys-kernel-config.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/unbound-usb-gadget %i

@@ -11,6 +11,7 @@ DRACUT_MODULES_DIR=$(PREFIX)/lib/dracut/modules.d
 SYSTEMD_UNIT_DIR=$(PREFIX)/lib/systemd/system
 UDEV_RULES_DIR=$(PREFIX)/lib/udev/rules.d
 UDEV_HWDB_DIR=$(PREFIX)/lib/udev/hwdb.d
+NETWORKD_DIR=$(PREFIX)/lib/systemd/network
 BUILD_SCRIPTS=$(addprefix build/,$(SCRIPTS))
 BUILD_ARCH_SCRIPTS=$(addprefix build/,$(ARCH_SCRIPTS))
 
@@ -118,7 +119,7 @@ uninstall-initramfs-tools:
 uninstall-debian: uninstall-initramfs-tools uninstall-macsmc-battery uninstall-udev-hwdb
 	rm -f $(DESTDIR)/etc/kernel/postinst.d/zz-update-unboot
 
-.PHONY: clean \
+.PHONY: install-usb-gadget clean \
         install \
         install-mkinitcpio \
         install-dracut \
@@ -137,3 +138,10 @@ uninstall-debian: uninstall-initramfs-tools uninstall-macsmc-battery uninstall-u
         uninstall-fedora \
         uninstall-initramfs-tools \
         uninstall-debian
+
+install-usb-gadget: install
+	install -dD $(DESTDIR)$(BIN_DIR) $(DESTDIR)$(SYSTEMD_UNIT_DIR) $(DESTDIR)$(UDEV_RULES_DIR) $(DESTDIR)$(NETWORKD_DIR)
+	install -m0755 -t $(DESTDIR)$(BIN_DIR) usb-gadget/unbound-usb-gadget
+	sed -e s,/usr/bin/,$(BIN_DIR)/,g usb-gadget/unbound-usb-gadget@.service > $(DESTDIR)$(SYSTEMD_UNIT_DIR)/unbound-usb-gadget@.service
+	install -m0644 -t $(DESTDIR)$(UDEV_RULES_DIR) usb-gadget/80-unbound-usb-gadget.rules
+	install -m0644 -t $(DESTDIR)$(NETWORKD_DIR) usb-gadget/80-unbound-usb-gadget.network
