@@ -121,7 +121,7 @@ EOF
 
 module_parameters() {
     echo "## Module parameters"
-    for mod in agx hid_apple hid_magicmouse; do
+    for mod in asahi hid_apple hid_magicmouse; do
         [ ! -e /sys/module/$mod/parameters/ ] && continue
         echo "    $mod"
         for param in /sys/module/$mod/parameters/*; do
