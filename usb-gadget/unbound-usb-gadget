@@ -1,16 +1,87 @@
 #!/bin/sh
-# Usage: unbound-usb-gadget <udc>
+# Usage: unbound-usb-gadget start|stop <udc>
+#
 # Exposes CDC-NCM and CDC-ACM on a USB device controller, for the USB-C link to a
-# development Mac; unbound-usb-gadget.network serves DHCP on the NCM interface.
+# development Mac. The NCM interface is named ug<n>. Each controller gets its own /24 in
+# 10.84.0.0/16 (10.84.0.0/24 for the first) with a systemd-networkd DHCP server on it that
+# offers no router and no DNS server, so the Mac keeps its own default route.
 set -eu
-udc=$1
+
+usage() {
+	echo "usage: $0 start|stop <udc>" >&2
+	exit 2
+}
+
+[ $# -eq 2 ] || usage
+cmd=$1
+udc=$2
+case "$cmd" in
+start|stop) ;;
+*) usage ;;
+esac
+
 g=/sys/kernel/config/usb_gadget/unbound-$udc
-[ -e "$g" ] && exit 0
+netdir=/run/systemd/network
+net=$netdir/80-unbound-usb-gadget-$udc.network
+
+reload_networkd() {
+	networkctl reload 2>/dev/null || true
+}
+
+teardown() {
+	if [ -d "$g" ]; then
+		if [ -s "$g/UDC" ]; then
+			echo > "$g/UDC" || true
+		fi
+		rm -f "$g/configs/c.1/ncm.usb" "$g/configs/c.1/acm.usb"
+		for d in "$g/configs/c.1/strings/0x409" "$g/configs/c.1" \
+			 "$g/functions/ncm.usb" "$g/functions/acm.usb" "$g/strings/0x409" "$g"; do
+			if [ -d "$d" ]; then
+				rmdir "$d" || true
+			fi
+		done
+	fi
+	if [ -e "$net" ]; then
+		rm -f "$net"
+		reload_networkd
+	fi
+}
+
+if [ "$cmd" = stop ]; then
+	teardown
+	exit 0
+fi
+
+# Already set up, for example when run by hand next to the unit.
+if [ -d "$g" ] && [ "$(cat "$g/UDC")" = "$udc" ]; then
+	exit 0
+fi
+# Anything else left over is a half-built gadget from a failed run.
+teardown
+trap teardown EXIT
+
 modprobe -q libcomposite
 modprobe -q usb_f_ncm
 modprobe -q usb_f_acm
-serial=$(tr -d '\0' < /proc/device-tree/serial-number 2>/dev/null || echo unknown)
-h=$(echo "$serial-$udc" | md5sum | cut -c1-8 | sed 's/../&:/g')
+
+machine=$(tr -d '\0' < /proc/device-tree/serial-number 2>/dev/null || echo unknown)
+# Stable per machine and controller without exposing the machine's serial number.
+serial=$(printf '%s-%s' "$machine" "$udc" | sha256sum | cut -c1-16)
+h=$(echo "$machine-$udc" | md5sum | cut -c1-8 | sed 's/../&:/g')
+mac=02:${h}10
+
+# A /24 per controller: the first one not used by another controller's gadget, so with a
+# single cable the Mac mini is always 10.84.0.1.
+mkdir -p "$netdir"
+n=0
+while grep -qs "^Address=10\.84\.$n\.1/" "$netdir"/80-unbound-usb-gadget-*.network; do
+	n=$(( n + 1 ))
+	if [ "$n" -gt 255 ]; then
+		echo "$0: no free subnet in 10.84.0.0/16" >&2
+		exit 1
+	fi
+done
+
 mkdir -p "$g/strings/0x409" "$g/configs/c.1/strings/0x409" "$g/functions/ncm.usb" "$g/functions/acm.usb"
 echo 0x1d6b > "$g/idVendor"
 echo 0x0104 > "$g/idProduct"
@@ -19,10 +90,39 @@ echo 0x02 > "$g/bDeviceSubClass"
 echo 0x01 > "$g/bDeviceProtocol"
 echo Unbound > "$g/strings/0x409/manufacturer"
 echo "$(tr -d '\0' < /proc/device-tree/model 2>/dev/null || echo Unbound)" > "$g/strings/0x409/product"
-echo "$serial-$udc" > "$g/strings/0x409/serialnumber"
+echo "$serial" > "$g/strings/0x409/serialnumber"
+# Self-powered: the Mac mini draws nothing from the host's VBUS.
+echo 0xc0 > "$g/configs/c.1/bmAttributes"
+echo 0 > "$g/configs/c.1/MaxPower"
 echo "ncm acm" > "$g/configs/c.1/strings/0x409/configuration"
-echo "02:${h}10" > "$g/functions/ncm.usb/dev_addr"
+echo 'ug%d' > "$g/functions/ncm.usb/ifname"
+echo "$mac" > "$g/functions/ncm.usb/dev_addr"
 echo "02:${h}11" > "$g/functions/ncm.usb/host_addr"
 ln -s "$g/functions/ncm.usb" "$g/configs/c.1/"
 ln -s "$g/functions/acm.usb" "$g/configs/c.1/"
+
+cat > "$net.tmp" <<EOF
+# Written by unbound-usb-gadget for $udc, removed again when the gadget is torn down.
+[Match]
+Driver=g_ether
+MACAddress=$mac
+
+[Link]
+RequiredForOnline=no
+
+[Network]
+Address=10.84.$n.1/24
+DHCPServer=yes
+
+[DHCPServer]
+PoolOffset=10
+PoolSize=11
+EmitRouter=no
+EmitDNS=no
+EmitNTP=no
+EOF
+mv "$net.tmp" "$net"
+reload_networkd
+
 echo "$udc" > "$g/UDC"
+trap - EXIT

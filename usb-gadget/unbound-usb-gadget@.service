@@ -2,8 +2,12 @@
 Description=USB-C gadget link on %i
 Requires=sys-kernel-config.mount
 After=sys-kernel-config.mount
+# Serves DHCP on the gadget's network interface.
+Wants=systemd-networkd.service
+After=systemd-networkd.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/unbound-usb-gadget %i
+ExecStart=/usr/bin/unbound-usb-gadget start %i
+ExecStop=/usr/bin/unbound-usb-gadget stop %i
