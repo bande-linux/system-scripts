@@ -9,7 +9,7 @@ g=/sys/kernel/config/usb_gadget/unbound-$udc
 modprobe -q libcomposite
 modprobe -q usb_f_ncm
 modprobe -q usb_f_acm
-serial=$(tr -d '\0' < /proc/device-tree/serial-number 2>/dev/null || echo unknown)
+serial=$(tr -d '\0' 2>/dev/null < /proc/device-tree/serial-number || echo unknown)
 h=$(echo "$serial-$udc" | md5sum | cut -c1-8 | sed 's/../&:/g')
 mkdir -p "$g/strings/0x409" "$g/configs/c.1/strings/0x409" "$g/functions/ncm.usb" "$g/functions/acm.usb"
 echo 0x1d6b > "$g/idVendor"
@@ -18,7 +18,7 @@ echo 0xef > "$g/bDeviceClass"
 echo 0x02 > "$g/bDeviceSubClass"
 echo 0x01 > "$g/bDeviceProtocol"
 echo Unbound > "$g/strings/0x409/manufacturer"
-echo "$(tr -d '\0' < /proc/device-tree/model 2>/dev/null || echo Unbound)" > "$g/strings/0x409/product"
+echo "$(tr -d '\0' 2>/dev/null < /proc/device-tree/model || echo Unbound)" > "$g/strings/0x409/product"
 echo "$serial-$udc" > "$g/strings/0x409/serialnumber"
 echo "ncm acm" > "$g/configs/c.1/strings/0x409/configuration"
 echo "02:${h}10" > "$g/functions/ncm.usb/dev_addr"
