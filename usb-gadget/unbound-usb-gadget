@@ -64,7 +64,7 @@ modprobe -q libcomposite
 modprobe -q usb_f_ncm
 modprobe -q usb_f_acm
 
-machine=$(tr -d '\0' < /proc/device-tree/serial-number 2>/dev/null || echo unknown)
+machine=$(tr -d '\0' 2>/dev/null < /proc/device-tree/serial-number || echo unknown)
 # Stable per machine and controller without exposing the machine's serial number.
 serial=$(printf '%s-%s' "$machine" "$udc" | sha256sum | cut -c1-16)
 h=$(echo "$machine-$udc" | md5sum | cut -c1-8 | sed 's/../&:/g')
@@ -89,7 +89,7 @@ echo 0xef > "$g/bDeviceClass"
 echo 0x02 > "$g/bDeviceSubClass"
 echo 0x01 > "$g/bDeviceProtocol"
 echo Unbound > "$g/strings/0x409/manufacturer"
-echo "$(tr -d '\0' < /proc/device-tree/model 2>/dev/null || echo Unbound)" > "$g/strings/0x409/product"
+echo "$(tr -d '\0' 2>/dev/null < /proc/device-tree/model || echo Unbound)" > "$g/strings/0x409/product"
 echo "$serial" > "$g/strings/0x409/serialnumber"
 # Self-powered: the Mac mini draws nothing from the host's VBUS.
 echo 0xc0 > "$g/configs/c.1/bmAttributes"
