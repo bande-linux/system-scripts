@@ -1,0 +1,4 @@
+# Wake from sleep with the keyboard or mouse, as on macOS. usbhid only enables
+# wakeup for boot keyboards, so also allow it for boot mice. power/wakeup only
+# appears once the device is configured, so also match bind.
+ACTION=="add|bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{ID_USB_INTERFACES}=="*:03010[12]:*", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
