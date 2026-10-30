@@ -21,7 +21,7 @@ installkernel() {
         tps6598x \
         apple-dart \
         dwc3 \
-        dwc3-of-simple \
+        dwc3-apple \
         nvmem-apple-efuses \
         phy-apple-atc \
         xhci-plat-hcd \
