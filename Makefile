@@ -139,7 +139,7 @@ uninstall-debian: uninstall-initramfs-tools uninstall-macsmc-battery uninstall-u
         uninstall-initramfs-tools \
         uninstall-debian
 
-install-usb-gadget: install
+install-usb-gadget:
 	install -dD $(DESTDIR)$(BIN_DIR) $(DESTDIR)$(SYSTEMD_UNIT_DIR) $(DESTDIR)$(UDEV_RULES_DIR) $(DESTDIR)$(NETWORKD_DIR)
 	install -m0755 -t $(DESTDIR)$(BIN_DIR) usb-gadget/unbound-usb-gadget
 	sed -e s,/usr/bin/,$(BIN_DIR)/,g usb-gadget/unbound-usb-gadget@.service > $(DESTDIR)$(SYSTEMD_UNIT_DIR)/unbound-usb-gadget@.service
