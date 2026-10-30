@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+# Set up the gadget on device controllers that already exist; new ones are handled by the
+# udev rule. Skipped when udev is not running (image builds, chroots).
+if [ "$1" = configure ] && [ -S /run/udev/control ]; then
+	udevadm control --reload-rules || true
+	udevadm trigger --subsystem-match=udc --action=add || true
+fi
+
+#DEBHELPER#
+
+exit 0

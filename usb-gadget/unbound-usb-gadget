@@ -64,7 +64,11 @@ modprobe -q libcomposite
 modprobe -q usb_f_ncm
 modprobe -q usb_f_acm
 
-machine=$(tr -d '\0' 2>/dev/null < /proc/device-tree/serial-number || echo unknown)
+machine=$(tr -d '\0' 2>/dev/null < /proc/device-tree/serial-number || true)
+# Without a serial number in the device tree, fall back to the machine ID so that the MAC
+# addresses still differ between machines.
+[ -n "$machine" ] || machine=$(cat /etc/machine-id 2>/dev/null || true)
+[ -n "$machine" ] || { echo "$0: no serial number or machine ID" >&2; exit 1; }
 # Stable per machine and controller without exposing the machine's serial number.
 serial=$(printf '%s-%s' "$machine" "$udc" | sha256sum | cut -c1-16)
 h=$(echo "$machine-$udc" | md5sum | cut -c1-8 | sed 's/../&:/g')
