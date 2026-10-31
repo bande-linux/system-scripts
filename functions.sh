@@ -28,7 +28,7 @@ mount_sys_esp() {
         umount "$mountpoint"
     done
 
-    esp_uuid="$(cat /proc/device-tree/chosen/unbound,efi-system-partition 2>/dev/null | sed 's/\x00//')"
+    esp_uuid="$(cat /proc/device-tree/chosen/bande,efi-system-partition 2>/dev/null | sed 's/\x00//')"
     if [ -e /boot/efi/.builder ] || [ -e /boot/.builder ] || [ -z "$esp_uuid" ]; then
         if [ -e "/boot/efi/unboot" ]; then
             bootmnt="/boot/efi"
@@ -36,7 +36,7 @@ mount_sys_esp() {
             bootmnt="/boot"
         else
             warn "ESP not found and cannot determine ESP PARTUUID."
-            warn "Make sure that your unboot has the right unbound,efi-system-partition configuration,"
+            warn "Make sure that your unboot has the right bande,efi-system-partition configuration,"
             warn "or that your ESP is mounted at /boot/efi or /boot."
             return 1
         fi
@@ -63,12 +63,12 @@ mount_boot_esp() {
     elif [ -e "/boot/efi/boot" ]; then
         mount --bind "/boot" "$mountpoint"
     else
-        esp_uuid="$(cat /proc/device-tree/chosen/unbound,efi-system-partition | sed 's/\x00//')"
+        esp_uuid="$(cat /proc/device-tree/chosen/bande,efi-system-partition | sed 's/\x00//')"
 
         if [ -z "$esp_uuid" ]; then
             echo "Boot ESP not found and cannot determine ESP PARTUUID."
             echo "Make sure your ESP is mounted at /boot/efi or /boot,"
-            echo "or that your unboot has the right unbound,efi-system-partition configuration."
+            echo "or that your unboot has the right bande,efi-system-partition configuration."
             return 1
         fi
 

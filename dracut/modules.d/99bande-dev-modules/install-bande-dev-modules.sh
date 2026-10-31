@@ -9,10 +9,10 @@ fi
 
 DESTDIR="/sysroot/lib/modules/$(uname -r)"
 
-info ":: Unbound: Installing dev kernel modules to root filesystem..."
+info ":: Bande: Installing dev kernel modules to root filesystem..."
 if [ ! -e ${DESTDIR} ]; then
     if [ ! -w /sysroot ]; then
-        error ":: Unbound: root fs not writable!"
+        error ":: Bande: root fs not writable!"
         return 0
     fi
 

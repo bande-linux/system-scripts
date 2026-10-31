@@ -1,4 +1,4 @@
-usr/bin/unbound-diagnose
-usr/bin/unbound-fwupdate
+usr/bin/bande-diagnose
+usr/bin/bande-fwupdate
 usr/bin/update-unboot
-usr/share/unbound-scripts/functions.sh
+usr/share/bande-scripts/functions.sh

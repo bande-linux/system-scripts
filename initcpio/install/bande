@@ -31,7 +31,7 @@ build() {
     map add_module apple-dockchannel? dockchannel-hid? apple-rtkit-helper?
 
     # Hook dependencies
-    add_full_dir /usr/share/unbound-scripts
+    add_full_dir /usr/share/bande-scripts
 
     # Firmware update script
     add_runscript

@@ -15,7 +15,7 @@ dt() {
 
 banner() {
     cat <<EOF
-# Unbound Linux System Diagnostic Dump
+# Bande Linux System Diagnostic Dump
 
     Collected at:   $(date) ($(date -Iseconds))
     Username:       $(whoami)
@@ -36,11 +36,11 @@ EOF
 firmware_versions() {
     cat <<EOF
 ## Firmware versions
-    iBoot1:         $(dt chosen/unbound,iboot1-version)
-    iBoot2:         $(dt chosen/unbound,iboot2-version)
-    SFR:            $(dt chosen/unbound,system-fw-version)
-    OS firmware:    $(dt chosen/unbound,os-fw-version)
-    unboot stage 2:   $(dt chosen/unbound,unboot-stage2-version)
+    iBoot1:         $(dt chosen/bande,iboot1-version)
+    iBoot2:         $(dt chosen/bande,iboot2-version)
+    SFR:            $(dt chosen/bande,system-fw-version)
+    OS firmware:    $(dt chosen/bande,os-fw-version)
+    unboot stage 2:   $(dt chosen/bande,unboot-stage2-version)
     U-Boot:         $(dt chosen/u-boot,version)
 
 EOF
@@ -49,7 +49,7 @@ EOF
 boot_config() {
     cat <<EOF
 ## Boot information
-    ESP UUID:       $(dt chosen/unbound,efi-system-partition)
+    ESP UUID:       $(dt chosen/bande,efi-system-partition)
     EFI:            $([ -e /sys/firmware/efi ] &&
                        echo available || echo unavailable)
 
@@ -93,19 +93,19 @@ package_versions() {
     echo "## Package versions"
     if [ -e /etc/arch-release ]; then
       cmd="pacman -Q"
-      pkgs="unboot uboot-unbound unbound-scripts unbound-meta unbound-desktop-meta
-            unbound-fwextract unbound-configs alsa-ucm-conf-unbound
-            unboundlinux-keyring linux linux-unbound linux-unbound-edge
+      pkgs="unboot uboot-bande bande-scripts bande-meta bande-desktop-meta
+            bande-fwextract bande-configs alsa-ucm-conf-bande
+            bandelinux-keyring linux linux-bande linux-bande-edge
             mesa xorg-server pipewire kwin mutter"
     elif [ -e /etc/fedora-release ]; then
       cmd="rpm -q"
-      pkgs="unboot alsa-ucm-unbound unbound-platform-metapackage unbound-repos
-            fedora-unbound-remix-scripts tiny-dfr uboot-images-armv8 kernel-16k
-            kernel-16k-modules-extra unbound-fwextract dracut-unbound update-unboot
-            unbound-audio speakersafetyd wireplumber pipewire mesa"
+      pkgs="unboot alsa-ucm-bande bande-platform-metapackage bande-repos
+            fedora-bande-remix-scripts tiny-dfr uboot-images-armv8 kernel-16k
+            kernel-16k-modules-extra bande-fwextract dracut-bande update-unboot
+            bande-audio speakersafetyd wireplumber pipewire mesa"
     elif [ -e /etc/debian_version ]; then
       cmd="dpkg-query -W"
-      pkgs="unbound-scripts unbound-nvram unbound-bless unbound-fwextract
+      pkgs="bande-scripts bande-nvram bande-bless bande-fwextract
             linux-image-$(uname -r) initramfs-tools systemd"
     else
       echo "Distribution not supported"
@@ -185,7 +185,7 @@ diagnose() {
     log "Saved diagnostic information to $f"
 
     plat="$(cat /proc/device-tree/compatible | sed -re 's/.*apple,(t....).*/\1/g')"
-    ver="$(tr -d '\0' </proc/device-tree/chosen/unbound,os-fw-version)"
+    ver="$(tr -d '\0' </proc/device-tree/chosen/bande,os-fw-version)"
     case "${plat}:${ver}" in
         t8103:12.3*) ;;
         t600[012]:12.3*) ;;
@@ -199,7 +199,7 @@ diagnose() {
             echo
             echo "** WARNING! **"
             echo "You are using an unsupported firmware version ($ver) on this platform ($plat)."
-            echo "This means you explicitly chose expert mode when installing Unbound Linux,"
+            echo "This means you explicitly chose expert mode when installing Bande Linux,"
             echo "and then explicitly selected a non-default unsupported version."
             echo "You are on your own. Please do not file bugs. We can't help you."
             echo "Reinstall without using expert mode if you want support."
@@ -225,10 +225,10 @@ diagnose() {
             echo "for how to fix."
         fi
 
-        if ! rpm -q unbound-platform-metapackage > /dev/null 2>&1; then
+        if ! rpm -q bande-platform-metapackage > /dev/null 2>&1; then
             echo
             echo "** WARNING! **"
-            echo "The unbound-platform-metapackage package is not installed, you may be missing"
+            echo "The bande-platform-metapackage package is not installed, you may be missing"
             echo "required platform dependencies. See https://discussion.fedoraproject.org/t/95301"
             echo "for how to fix it."
         fi
@@ -243,7 +243,7 @@ diagnose() {
 }
 
 if [ -z "$1" ]; then
-    diagnose "$HOME/unbound-diagnose-$(date +%Y%m%d-%H%M%S).txt"
+    diagnose "$HOME/bande-diagnose-$(date +%Y%m%d-%H%M%S).txt"
 elif [ "$1" = "-" ]; then
     diagnose /dev/stdout
 else

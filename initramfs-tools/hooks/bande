@@ -17,8 +17,8 @@ manual_add_modules apple-mailbox nvme-apple pinctrl-apple-gpio macsmc macsmc-rtk
 
 copy_exec /usr/bin/cpio /usr/bin
 copy_exec /usr/bin/mount /usr/bin
-mkdir -p "$DESTDIR/usr/share/unbound-scripts" "$DESTDIR/usr/lib/firmware"
-cp /usr/share/unbound-scripts/functions.sh "$DESTDIR/usr/share/unbound-scripts/"
+mkdir -p "$DESTDIR/usr/share/bande-scripts" "$DESTDIR/usr/lib/firmware"
+cp /usr/share/bande-scripts/functions.sh "$DESTDIR/usr/share/bande-scripts/"
 ln -sfn /vendorfw "$DESTDIR/usr/lib/firmware/vendor"
 mkdir -p "$DESTDIR/etc/modprobe.d"
-echo "blacklist xhci_pci" > "$DESTDIR/etc/modprobe.d/unbound-vendorfw.conf"
+echo "blacklist xhci_pci" > "$DESTDIR/etc/modprobe.d/bande-vendorfw.conf"

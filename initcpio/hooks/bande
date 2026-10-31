@@ -3,16 +3,16 @@
 
 run_earlyhook() {
     if [ -e /vendorfw ]; then
-        msg ":: Unbound: Vendor firmware was loaded by the bootloader"
+        msg ":: Bande: Vendor firmware was loaded by the bootloader"
         return 0
     fi
 
-    if [ ! -e /proc/device-tree/chosen/unbound,efi-system-partition ]; then
-        msg ":: Unbound: Missing unbound,efi-system-partition variable, firmware will not be loaded!"
+    if [ ! -e /proc/device-tree/chosen/bande,efi-system-partition ]; then
+        msg ":: Bande: Missing bande,efi-system-partition variable, firmware will not be loaded!"
         return 1
     fi
 
-    msg ":: Unbound: Triggering early load of NVMe modules..."
+    msg ":: Bande: Triggering early load of NVMe modules..."
     modprobe apple-mailbox
     modprobe nvme-apple
     modprobe xhci-plat-hcd
@@ -29,17 +29,17 @@ run_earlyhook() {
 
     # If the above exists, hopefully the /dev device exists and this will work
 
-    msg ":: Unbound: Unpacking vendor firmware into initramfs..."
+    msg ":: Bande: Unpacking vendor firmware into initramfs..."
 
     VENDORFW="/run/.system-efi/vendorfw/"
 
     (
-        . /usr/share/unbound-scripts/functions.sh
+        . /usr/share/bande-scripts/functions.sh
         mount_sys_esp /run/.system-efi
     )
 
     if [ ! -e "$VENDORFW/firmware.cpio" ]; then
-        msg ":: Unbound: Vendor firmware not available in ESP!"
+        msg ":: Bande: Vendor firmware not available in ESP!"
         umount /run/.system-efi
         return 1
     fi
@@ -47,12 +47,12 @@ run_earlyhook() {
     ( cd /; cpio -i < "$VENDORFW/firmware.cpio" )
     umount /run/.system-efi
 
-    msg ":: Unbound: Vendor firmware unpacked successfully"
+    msg ":: Bande: Vendor firmware unpacked successfully"
 }
 
 run_latehook() {
     [ -e /vendorfw ] || return
-    msg ":: Unbound: Copying vendor firmware to tmpfs under root filesystem..."
+    msg ":: Bande: Copying vendor firmware to tmpfs under root filesystem..."
     mkdir -p /new_root/lib/firmware/vendor
     mount -t tmpfs -o mode=0755 vendorfw /new_root/lib/firmware/vendor
     cp -r /vendorfw/* /vendorfw/.vendorfw.manifest /new_root/lib/firmware/vendor

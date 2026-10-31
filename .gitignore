@@ -1,6 +1,6 @@
 build
-/unbound-scripts-*\.src\.rpm
-/unbound-scripts-*\.tar\.gz
-/unbound-scripts\.spec
+/bande-scripts-*\.src\.rpm
+/bande-scripts-*\.tar\.gz
+/bande-scripts\.spec
 /15-update-unboot\.install
 /update-unboot\.sysconfig

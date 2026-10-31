@@ -6,4 +6,4 @@ After=sys-kernel-config.mount
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/unbound-usb-gadget %i
+ExecStart=/usr/bin/bande-usb-gadget %i

@@ -12,7 +12,7 @@ esac
 
 mkdir -p "${rootmnt}/lib/firmware/vendor"
 if ! mount -t tmpfs -o mode=0755 vendorfw "${rootmnt}/lib/firmware/vendor"; then
-    log_failure_msg "Unbound: cannot mount ${rootmnt}/lib/firmware/vendor"
+    log_failure_msg "Bande: cannot mount ${rootmnt}/lib/firmware/vendor"
     exit 0
 fi
 cp -a /vendorfw/. "${rootmnt}/lib/firmware/vendor/"

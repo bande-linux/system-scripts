@@ -10,7 +10,7 @@ set -e
 if [ -e "$(dirname "$0")"/functions.sh ]; then
     . "$(dirname "$0")"/functions.sh
 else
-    . /usr/share/unbound-scripts/functions.sh
+    . /usr/share/bande-scripts/functions.sh
 fi
 
 : ${SOURCE:="/usr/lib/unboot/"}

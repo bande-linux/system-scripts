@@ -3,9 +3,9 @@
 
 type getarg > /dev/null 2>&1 || . /lib/dracut-lib.sh
 
-info ":: Unbound: Installing vendor firmware to root filesystem..."
+info ":: Bande: Installing vendor firmware to root filesystem..."
 if [ ! -d /sysroot/lib/firmware/vendor ]; then
-    warn ":: Unbound: Vendor firmware directory missing on the root filesystem!"
+    warn ":: Bande: Vendor firmware directory missing on the root filesystem!"
     return 1
 fi
 mount -t tmpfs -o mode=0755 vendorfw /sysroot/lib/firmware/vendor

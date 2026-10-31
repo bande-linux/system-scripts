@@ -1,0 +1,4 @@
+usr/bin/bande-usb-gadget
+usr/lib/systemd/system/bande-usb-gadget@.service
+usr/lib/udev/rules.d/80-bande-usb-gadget.rules
+usr/lib/systemd/network/80-bande-usb-gadget.network

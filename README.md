@@ -1,6 +1,6 @@
-# Unbound Linux system scripts
+# Bande Linux system scripts
 
-Admin scripts for Unbound Linux on Apple Silicon Macs: firmware loading in the
+Admin scripts for Bande Linux on Apple Silicon Macs: firmware loading in the
 initramfs (dracut and mkinitcpio), firmware and bootloader updates on the EFI
 system partition, and a diagnostic dump.
 

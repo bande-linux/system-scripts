@@ -1,22 +1,22 @@
-Source: unbound-scripts
+Source: bande-scripts
 Section: admin
 Priority: optional
 Maintainer: Mikael Hug <mikaelhug@gmail.com>
 Build-Depends: debhelper-compat (= 13)
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
-Homepage: https://github.com/unbound-linux/system-scripts
+Homepage: https://github.com/bande-linux/system-scripts
 
-Package: unbound-scripts
+Package: bande-scripts
 Architecture: all
 Depends: ${misc:Depends}, busybox, cpio, initramfs-tools, mount
-Recommends: unbound-fwextract
-Description: Unbound Linux system scripts for Apple Silicon Macs
+Recommends: bande-fwextract
+Description: Bande Linux system scripts for Apple Silicon Macs
  Loads vendor firmware from the EFI system partition in the initramfs,
  updates firmware and the unboot image on the EFI system partition, and
  collects a diagnostic dump.
 
-Package: unbound-usb-gadget
+Package: bande-usb-gadget
 Architecture: all
 Depends: ${misc:Depends}, systemd, kmod
 Description: USB-C gadget link from an Apple Silicon Mac to a development Mac

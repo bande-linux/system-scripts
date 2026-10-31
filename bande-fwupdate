@@ -5,9 +5,9 @@ set -eu
 
 unset PYTHON
 
-[ -e /etc/default/unbound-fwupdate ] && . /etc/default/unbound-fwupdate
+[ -e /etc/default/bande-fwupdate ] && . /etc/default/bande-fwupdate
 
-: "${UNBOUNDFW:=}"
+: "${BANDEFW:=}"
 : "${VENDORFW:=}"
 : "${VENDORFWTMP:=/run/.vendorfw-tmp}"
 : "${PYTHON:=/usr/bin/python3}"
@@ -15,19 +15,19 @@ unset PYTHON
 if [ -e "$(dirname "$0")"/functions.sh ]; then
     . "$(dirname "$0")"/functions.sh
 else
-    . /usr/share/unbound-scripts/functions.sh
+    . /usr/share/bande-scripts/functions.sh
 fi
 
 umount=false
 
-if [ -z "$UNBOUNDFW" ] && [ -z "$VENDORFW" ]; then
+if [ -z "$BANDEFW" ] && [ -z "$VENDORFW" ]; then
     mount_sys_esp /run/.system-efi
-    UNBOUNDFW="/run/.system-efi/unbound/"
+    BANDEFW="/run/.system-efi/bande/"
     VENDORFW="/run/.system-efi/vendorfw"
     umount=true
 fi
 
-if [ ! -e "${UNBOUNDFW}/all_firmware.tar.gz" ]; then
+if [ ! -e "${BANDEFW}/all_firmware.tar.gz" ]; then
     echo "No firmware tarball found, skipping extraction"
     exit 0
 fi
@@ -41,7 +41,7 @@ if [ ! -d "$VENDORFWTMP" ]; then
 fi
 
 echo "Upgrading vendor firmware package"
-unbound-fwextract "$UNBOUNDFW" "$VENDORFWTMP"
+bande-fwextract "$BANDEFW" "$VENDORFWTMP"
 rm -rf "$VENDORFW".new
 mv "${VENDORFWTMP}" "$VENDORFW".new
 rm -rf "$VENDORFW"

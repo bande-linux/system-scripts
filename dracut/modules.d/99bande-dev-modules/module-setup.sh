@@ -3,7 +3,7 @@
 
 # called by dracut
 check() {
-    if [ -n "$hostonly" ] && [ ! -e /proc/device-tree/chosen/unbound,efi-system-partition ]; then
+    if [ -n "$hostonly" ] && [ ! -e /proc/device-tree/chosen/bande,efi-system-partition ]; then
        return 0
     elif [ -z "$hostonly" ]; then
         return 0
@@ -21,6 +21,6 @@ depends() {
 # called by dracut
 install() {
     inst_multiple cp ln mkdir mount
-    inst_hook pre-udev 99 "${moddir}/link-unbound-dev-modules.sh"
-    inst_hook pre-pivot 99 "${moddir}/install-unbound-dev-modules.sh"
+    inst_hook pre-udev 99 "${moddir}/link-bande-dev-modules.sh"
+    inst_hook pre-pivot 99 "${moddir}/install-bande-dev-modules.sh"
 }

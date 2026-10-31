@@ -7,7 +7,7 @@ on:
 
 jobs:
   deb:
-    runs-on: [self-hosted, unbound]
+    runs-on: [self-hosted, bande]
     timeout-minutes: 20
 
     steps:
@@ -36,18 +36,18 @@ jobs:
             version=$(ls /lib/modules)
             update-initramfs -c -k "$version" >/dev/null 2>&1 || update-initramfs -u -k "$version"
             lsinitramfs /boot/initrd.img-$version > /tmp/list
-            for f in usr/share/initramfs-tools/scripts/init-premount/unbound \
-                     scripts/init-premount/unbound scripts/init-bottom/unbound \
-                     usr/share/unbound-scripts/functions.sh usr/bin/cpio usr/lib/firmware/vendor; do
+            for f in usr/share/initramfs-tools/scripts/init-premount/bande \
+                     scripts/init-premount/bande scripts/init-bottom/bande \
+                     usr/share/bande-scripts/functions.sh usr/bin/cpio usr/lib/firmware/vendor; do
               grep -qx "$f" /tmp/list && echo "present: $f" || echo "absent: $f"
             done
-            grep -qx scripts/init-premount/unbound /tmp/list
-            grep -qx scripts/init-bottom/unbound /tmp/list
-            grep -qx usr/share/unbound-scripts/functions.sh /tmp/list
+            grep -qx scripts/init-premount/bande /tmp/list
+            grep -qx scripts/init-bottom/bande /tmp/list
+            grep -qx usr/share/bande-scripts/functions.sh /tmp/list
             grep -qx usr/lib/firmware/vendor /tmp/list
-            unbound-diagnose - | sed -n "/## Package versions/,/^\$/p"'
+            bande-diagnose - | sed -n "/## Package versions/,/^\$/p"'
 
       - uses: actions/upload-artifact@v7
         with:
-          name: unbound-scripts-deb
+          name: bande-scripts-deb
           path: out/*.deb

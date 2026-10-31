@@ -2,7 +2,7 @@ PREFIX=/usr/local
 SYS_PREFIX=$(PREFIX)
 CONFIG_DIR=/etc/default
 BIN_DIR=$(PREFIX)/bin
-SCRIPTS=unbound-diagnose unbound-fwupdate update-unboot
+SCRIPTS=bande-diagnose bande-fwupdate update-unboot
 ARCH_SCRIPTS=update-grub first-boot
 UNITS=first-boot.service
 MULTI_USER_WANTS=first-boot.service
@@ -29,25 +29,25 @@ install: all
 	install -d $(DESTDIR)$(BIN_DIR)/
 	install -m0755 -t $(DESTDIR)$(BIN_DIR)/ $(BUILD_SCRIPTS)
 	install -dD $(DESTDIR)/etc
-	install -dD $(DESTDIR)$(PREFIX)/share/unbound-scripts
-	install -m0644 -t $(DESTDIR)$(PREFIX)/share/unbound-scripts functions.sh
+	install -dD $(DESTDIR)$(PREFIX)/share/bande-scripts
+	install -m0644 -t $(DESTDIR)$(PREFIX)/share/bande-scripts functions.sh
 	install -dD $(DESTDIR)$(SYS_PREFIX)/lib/firmware/vendor
 
 install-mkinitcpio: install
 	install -dD $(DESTDIR)$(PREFIX)/lib/initcpio/install
-	install -m0644 -t $(DESTDIR)$(PREFIX)/lib/initcpio/install initcpio/install/unbound
+	install -m0644 -t $(DESTDIR)$(PREFIX)/lib/initcpio/install initcpio/install/bande
 	install -dD $(DESTDIR)$(PREFIX)/lib/initcpio/hooks
-	install -m0644 -t $(DESTDIR)$(PREFIX)/lib/initcpio/hooks initcpio/hooks/unbound
+	install -m0644 -t $(DESTDIR)$(PREFIX)/lib/initcpio/hooks initcpio/hooks/bande
 
 install-dracut: install
 	install -dD $(DESTDIR)$(DRACUT_CONF_DIR)
-	install -m0644 -t $(DESTDIR)$(DRACUT_CONF_DIR) dracut/dracut.conf.d/10-unbound.conf
-	install -dD $(DESTDIR)$(DRACUT_MODULES_DIR)/91kernel-modules-unbound
-	install -m0755 -t $(DESTDIR)$(DRACUT_MODULES_DIR)/91kernel-modules-unbound dracut/modules.d/91kernel-modules-unbound/module-setup.sh
-	install -dD $(DESTDIR)$(DRACUT_MODULES_DIR)/99unbound-firmware
-	install -m0755 -t $(DESTDIR)$(DRACUT_MODULES_DIR)/99unbound-firmware dracut/modules.d/99unbound-firmware/install-unbound-firmware.sh
-	install -m0755 -t $(DESTDIR)$(DRACUT_MODULES_DIR)/99unbound-firmware dracut/modules.d/99unbound-firmware/load-unbound-firmware.sh
-	install -m0755 -t $(DESTDIR)$(DRACUT_MODULES_DIR)/99unbound-firmware dracut/modules.d/99unbound-firmware/module-setup.sh
+	install -m0644 -t $(DESTDIR)$(DRACUT_CONF_DIR) dracut/dracut.conf.d/10-bande.conf
+	install -dD $(DESTDIR)$(DRACUT_MODULES_DIR)/91kernel-modules-bande
+	install -m0755 -t $(DESTDIR)$(DRACUT_MODULES_DIR)/91kernel-modules-bande dracut/modules.d/91kernel-modules-bande/module-setup.sh
+	install -dD $(DESTDIR)$(DRACUT_MODULES_DIR)/99bande-firmware
+	install -m0755 -t $(DESTDIR)$(DRACUT_MODULES_DIR)/99bande-firmware dracut/modules.d/99bande-firmware/install-bande-firmware.sh
+	install -m0755 -t $(DESTDIR)$(DRACUT_MODULES_DIR)/99bande-firmware dracut/modules.d/99bande-firmware/load-bande-firmware.sh
+	install -m0755 -t $(DESTDIR)$(DRACUT_MODULES_DIR)/99bande-firmware dracut/modules.d/99bande-firmware/module-setup.sh
 
 install-macsmc-battery: install
 	install -dD $(DESTDIR)$(SYSTEMD_UNIT_DIR)
@@ -58,7 +58,7 @@ install-macsmc-battery: install
 
 install-udev-hwdb: install
 	install -dD $(DESTDIR)$(UDEV_HWDB_DIR)
-	install -m0644 -t $(DESTDIR)$(UDEV_HWDB_DIR) udev/hwdb.d/65-autosuspend-override-unbound-sdhci.hwdb
+	install -m0644 -t $(DESTDIR)$(UDEV_HWDB_DIR) udev/hwdb.d/65-autosuspend-override-bande-sdhci.hwdb
 
 install-arch: install install-mkinitcpio install-macsmc-battery install-udev-hwdb
 	install -m0755 -t $(DESTDIR)$(BIN_DIR)/ $(BUILD_ARCH_SCRIPTS)
@@ -74,11 +74,11 @@ install-fedora: install install-dracut install-macsmc-battery install-udev-hwdb
 
 install-initramfs-tools: install
 	install -dD $(DESTDIR)$(PREFIX)/share/initramfs-tools/hooks
-	install -m0755 -t $(DESTDIR)$(PREFIX)/share/initramfs-tools/hooks initramfs-tools/hooks/unbound
+	install -m0755 -t $(DESTDIR)$(PREFIX)/share/initramfs-tools/hooks initramfs-tools/hooks/bande
 	install -dD $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-premount
-	install -m0755 -t $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-premount initramfs-tools/scripts/init-premount/unbound
+	install -m0755 -t $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-premount initramfs-tools/scripts/init-premount/bande
 	install -dD $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-bottom
-	install -m0755 -t $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-bottom initramfs-tools/scripts/init-bottom/unbound
+	install -m0755 -t $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-bottom initramfs-tools/scripts/init-bottom/bande
 
 install-debian: install install-initramfs-tools install-macsmc-battery install-udev-hwdb
 	install -dD $(DESTDIR)/etc/kernel/postinst.d
@@ -86,14 +86,14 @@ install-debian: install install-initramfs-tools install-macsmc-battery install-u
 
 uninstall:
 	rm -f $(addprefix $(DESTDIR)$(BIN_DIR)/,$(SCRIPTS))
-	rm -rf $(DESTDIR)$(PREFIX)/share/unbound-scripts
+	rm -rf $(DESTDIR)$(PREFIX)/share/bande-scripts
 
 uninstall-mkinitcpio:
-	rm -f $(DESTDIR)$(PREFIX)/lib/initcpio/install/unbound
-	rm -f $(DESTDIR)$(PREFIX)/lib/initcpio/hooks/unbound
+	rm -f $(DESTDIR)$(PREFIX)/lib/initcpio/install/bande
+	rm -f $(DESTDIR)$(PREFIX)/lib/initcpio/hooks/bande
 
 uninstall-dracut:
-	rm -f $(DESTDIR)$(DRACUT_CONF_DIR)/10-unbound.conf
+	rm -f $(DESTDIR)$(DRACUT_CONF_DIR)/10-bande.conf
 
 uninstall-macsmc-battery:
 	rm -f $(DESTDIR)$(SYSTEMD_UNIT_DIR)/macsmc-battery-charge-control-end-threshold.path
@@ -101,7 +101,7 @@ uninstall-macsmc-battery:
 	rm -f $(DESTDIR)$(UDEV_RULES_DIR)/93-macsmc-battery-charge-control.rules
 
 uninstall-udev-hwdb:
-	rm -f $(DESTDIR)$(UDEV_HWDB_DIR)/65-autosuspend-override-unbound-sdhci.hwdb
+	rm -f $(DESTDIR)$(UDEV_HWDB_DIR)/65-autosuspend-override-bande-sdhci.hwdb
 
 uninstall-arch: uninstall-mkinitcpio uninstall-macsmc-battery uninstall-udev-hwdb
 	rm -f $(addprefix $(DESTDIR)$(BIN_DIR)/,$(ARCH_SCRIPTS))
@@ -112,9 +112,9 @@ uninstall-arch: uninstall-mkinitcpio uninstall-macsmc-battery uninstall-udev-hwd
 uninstall-fedora: uninstall-dracut uninstall-macsmc-battery uninstall-udev-hwdb
 
 uninstall-initramfs-tools:
-	rm -f $(DESTDIR)$(PREFIX)/share/initramfs-tools/hooks/unbound
-	rm -f $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-premount/unbound
-	rm -f $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-bottom/unbound
+	rm -f $(DESTDIR)$(PREFIX)/share/initramfs-tools/hooks/bande
+	rm -f $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-premount/bande
+	rm -f $(DESTDIR)$(PREFIX)/share/initramfs-tools/scripts/init-bottom/bande
 
 uninstall-debian: uninstall-initramfs-tools uninstall-macsmc-battery uninstall-udev-hwdb
 	rm -f $(DESTDIR)/etc/kernel/postinst.d/zz-update-unboot
@@ -141,7 +141,7 @@ uninstall-debian: uninstall-initramfs-tools uninstall-macsmc-battery uninstall-u
 
 install-usb-gadget: install
 	install -dD $(DESTDIR)$(BIN_DIR) $(DESTDIR)$(SYSTEMD_UNIT_DIR) $(DESTDIR)$(UDEV_RULES_DIR) $(DESTDIR)$(NETWORKD_DIR)
-	install -m0755 -t $(DESTDIR)$(BIN_DIR) usb-gadget/unbound-usb-gadget
-	sed -e s,/usr/bin/,$(BIN_DIR)/,g usb-gadget/unbound-usb-gadget@.service > $(DESTDIR)$(SYSTEMD_UNIT_DIR)/unbound-usb-gadget@.service
-	install -m0644 -t $(DESTDIR)$(UDEV_RULES_DIR) usb-gadget/80-unbound-usb-gadget.rules
-	install -m0644 -t $(DESTDIR)$(NETWORKD_DIR) usb-gadget/80-unbound-usb-gadget.network
+	install -m0755 -t $(DESTDIR)$(BIN_DIR) usb-gadget/bande-usb-gadget
+	sed -e s,/usr/bin/,$(BIN_DIR)/,g usb-gadget/bande-usb-gadget@.service > $(DESTDIR)$(SYSTEMD_UNIT_DIR)/bande-usb-gadget@.service
+	install -m0644 -t $(DESTDIR)$(UDEV_RULES_DIR) usb-gadget/80-bande-usb-gadget.rules
+	install -m0644 -t $(DESTDIR)$(NETWORKD_DIR) usb-gadget/80-bande-usb-gadget.network

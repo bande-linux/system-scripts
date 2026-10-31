@@ -11,34 +11,34 @@ esac
 load_vendorfw() {
     [ -e /vendorfw ] && return 0
 
-    if [ ! -e /proc/device-tree/chosen/unbound,efi-system-partition ]; then
-        log_warning_msg "Unbound: no unbound,efi-system-partition in the device tree, vendor firmware not loaded"
+    if [ ! -e /proc/device-tree/chosen/bande,efi-system-partition ]; then
+        log_warning_msg "Bande: no bande,efi-system-partition in the device tree, vendor firmware not loaded"
         return 0
     fi
 
     modprobe -q apple-mailbox
     modprobe -q nvme-apple
 
-    esp_uuid="$(tr -d '\000' < /proc/device-tree/chosen/unbound,efi-system-partition)"
+    esp_uuid="$(tr -d '\000' < /proc/device-tree/chosen/bande,efi-system-partition)"
     for i in $(seq 0 50); do
         [ -e "/dev/disk/by-partuuid/$esp_uuid" ] && break
         sleep 0.1
     done
     if [ ! -e "/dev/disk/by-partuuid/$esp_uuid" ]; then
-        log_failure_msg "Unbound: EFI system partition $esp_uuid not found"
+        log_failure_msg "Bande: EFI system partition $esp_uuid not found"
         return 0
     fi
 
-    (. /usr/share/unbound-scripts/functions.sh; mount_sys_esp /run/.system-efi) || true
+    (. /usr/share/bande-scripts/functions.sh; mount_sys_esp /run/.system-efi) || true
     if ! grep -q " /run/.system-efi " /proc/mounts; then
-        log_failure_msg "Unbound: cannot mount EFI system partition $esp_uuid"
+        log_failure_msg "Bande: cannot mount EFI system partition $esp_uuid"
         return 0
     fi
 
     if [ -e /run/.system-efi/vendorfw/firmware.cpio ]; then
         (cd / && cpio --quiet -i < /run/.system-efi/vendorfw/firmware.cpio)
     else
-        log_warning_msg "Unbound: no vendor firmware on the EFI system partition"
+        log_warning_msg "Bande: no vendor firmware on the EFI system partition"
     fi
     umount /run/.system-efi
 }
