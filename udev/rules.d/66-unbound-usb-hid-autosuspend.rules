@@ -1,0 +1,5 @@
+# Let USB boot keyboards and mice autosuspend, so an idle receiver no longer
+# keeps the xHCI controller and its PCIe link active. usbhid only suspends
+# an opened device when it can wake the host.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", \
+  ENV{ID_USB_INTERFACES}=="*:0301*", TEST=="power/control", ATTR{power/control}="auto"

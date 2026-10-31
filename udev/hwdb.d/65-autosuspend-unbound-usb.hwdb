@@ -1,0 +1,4 @@
+# ASMedia ASM2142 xHCI behind the USB-A ports of the M1/M2 Mac mini and iMac.
+# It reaches D3hot with PME wakeup once its USB devices are suspended.
+pci:v00001B21d00002142*
+ ID_AUTOSUSPEND=1

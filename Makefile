@@ -59,6 +59,9 @@ install-macsmc-battery: install
 install-udev-hwdb: install
 	install -dD $(DESTDIR)$(UDEV_HWDB_DIR)
 	install -m0644 -t $(DESTDIR)$(UDEV_HWDB_DIR) udev/hwdb.d/65-autosuspend-override-unbound-sdhci.hwdb
+	install -m0644 -t $(DESTDIR)$(UDEV_HWDB_DIR) udev/hwdb.d/65-autosuspend-unbound-usb.hwdb
+	install -dD $(DESTDIR)$(UDEV_RULES_DIR)
+	install -m0644 -t $(DESTDIR)$(UDEV_RULES_DIR) udev/rules.d/66-unbound-usb-hid-autosuspend.rules
 
 install-arch: install install-mkinitcpio install-macsmc-battery install-udev-hwdb
 	install -m0755 -t $(DESTDIR)$(BIN_DIR)/ $(BUILD_ARCH_SCRIPTS)
@@ -102,6 +105,8 @@ uninstall-macsmc-battery:
 
 uninstall-udev-hwdb:
 	rm -f $(DESTDIR)$(UDEV_HWDB_DIR)/65-autosuspend-override-unbound-sdhci.hwdb
+	rm -f $(DESTDIR)$(UDEV_HWDB_DIR)/65-autosuspend-unbound-usb.hwdb
+	rm -f $(DESTDIR)$(UDEV_RULES_DIR)/66-unbound-usb-hid-autosuspend.rules
 
 uninstall-arch: uninstall-mkinitcpio uninstall-macsmc-battery uninstall-udev-hwdb
 	rm -f $(addprefix $(DESTDIR)$(BIN_DIR)/,$(ARCH_SCRIPTS))
