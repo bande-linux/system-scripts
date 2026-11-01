@@ -6,6 +6,19 @@ version="$1"
 
 [ -x /usr/bin/update-unboot ] || exit 0
 [ -e /usr/lib/unboot/unboot.bin ] || exit 0
-[ -d "/usr/lib/linux-image-$version" ] || exit 0
 
-DTBS="${DTBS:-/usr/lib/linux-image-$version}" exec /usr/bin/update-unboot
+if [ -z "$DTBS" ]; then
+    for dir in "/usr/lib/modules/$version/dtb" "/usr/lib/linux-image-$version"; do
+        if [ -d "$dir" ]; then
+            DTBS="$dir"
+            break
+        fi
+    done
+fi
+
+if [ -z "$DTBS" ]; then
+    echo "W: zz-update-unboot: no DTBs for $version in /usr/lib/modules/$version/dtb or /usr/lib/linux-image-$version; unboot not updated" >&2
+    exit 0
+fi
+
+DTBS="$DTBS" exec /usr/bin/update-unboot
