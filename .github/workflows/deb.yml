@@ -13,10 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Build the package on Debian 13
+      - name: Build the package on Debian testing
         run: |
           mkdir -p out
-          git archive --prefix=src/ HEAD | docker run --rm -i debian:trixie sh -euc '
+          git archive --prefix=src/ HEAD | docker run --rm -i debian:testing sh -euc '
             apt-get update -qq
             apt-get install -y -qq --no-install-recommends build-essential debhelper lintian >/dev/null
             tar -x -C /tmp
@@ -26,9 +26,9 @@ jobs:
             cd /tmp && tar -c *.deb' | tar -x -C out
           ls -l out
 
-      - name: Install it on Debian 13 and build an initramfs
+      - name: Install it on Debian testing and build an initramfs
         run: |
-          tar -c -C out . | docker run --rm -i debian:trixie sh -euc '
+          tar -c -C out . | docker run --rm -i debian:testing sh -euc '
             mkdir /tmp/debs
             tar -x -C /tmp/debs
             apt-get update -qq
