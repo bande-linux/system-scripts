@@ -44,4 +44,5 @@ load_vendorfw() {
 }
 
 load_vendorfw
+rm -f /etc/modprobe.d/bande-vendorfw.conf
 modprobe -q xhci_pci
