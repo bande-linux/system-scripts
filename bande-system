@@ -257,25 +257,24 @@ discard_unfinished() {
     done
 }
 
+newest_pending() {
+    newest=$(entries | while read -r path; do echo "$(entry_rank "$path") $path"; done | sort -n | tail -n 1 | cut -d' ' -f2)
+    [ -n "$newest" ] && [ "$(entry_state "$newest")" = pending ] || return 1
+    id=$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$newest")
+    [ "$id" != "$(running_id || true)" ] || return 1
+    echo "$id"
+}
+
 restore_pending() {
-    for path in $(entries); do
-        [ "$(entry_state "$path")" = pending ] || continue
-        id=$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")
-        [ "$id" != "$(running_id || true)" ] || continue
-        [ "$(info "$id" why)" != restore ] || return 0
-    done
-    return 1
+    id=$(newest_pending) || return 1
+    [ "$(info "$id" why)" = restore ]
 }
 
 discard_pending() {
-    for path in $(entries); do
-        [ "$(entry_state "$path")" = pending ] || continue
-        id=$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")
-        [ "$(info "$id" why)" = update ] || continue
-        [ "$id" != "$(running_id || true)" ] || continue
-        echo "bande-system: discarding the prepared update, it no longer matches this system" >&2
-        delete_version "$id"
-    done
+    id=$(newest_pending) || return 0
+    [ "$(info "$id" why)" = update ] || return 0
+    echo "bande-system: discarding the prepared update, it no longer matches this system" >&2
+    delete_version "$id"
 }
 
 clean_boot_files() {
@@ -426,9 +425,11 @@ cmd_restore() {
     mount_esp
     [ -d "$top/@system/$from" ] || die "there is no version $from"
     running=$(running_id || last_run)
-    for path in $(entries); do
-        [ "$(entry_state "$path")" != pending ] || delete_version "$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")"
-    done
+    if id=$(newest_pending) && [ "$id" != "$from" ] && [ "$id" != "$running" ]; then
+        case "$(info "$id" why)" in
+        update | restore) delete_version "$id" ;;
+        esac
+    fi
     id=$(clone_version "$from" restore)
     [ -z "$running" ] || set_info "$id" carry_from "$running"
     update_boot_image "$id"
