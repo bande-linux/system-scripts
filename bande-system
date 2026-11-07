@@ -332,6 +332,27 @@ cmd_first_entry() {
     rm -rf "$top"
 }
 
+cmd_adopt() {
+    id=$1
+    case "$id" in
+    "" | *[!0-9]*) die "usage: bande-system adopt <version>, run in a chroot of that version" ;;
+    esac
+    from=$(last_run)
+    if [ "$from" = "$id" ]; then
+        from=
+    fi
+    top=$(mktemp -d)
+    mkdir "$top/@system"
+    ln -s / "$top/@system/$id"
+    echo "created=$(date +%s)" > "$top/@system/$id.info"
+    old=$(entry_of "$id" || true)
+    update_boot_image "$id"
+    echo "$from" > /.bande-first-boot
+    write_entry "$id" "$BANDE_ESP/loader/entries/bande-$(next_rank)+$TRIES.conf"
+    [ -z "$old" ] || rm -f "$old"
+    rm -rf "$top"
+}
+
 cmd_prepare() {
     running=$(running_id) || die "this system does not have the @system layout"
     take_lock
@@ -506,6 +527,7 @@ cmd_first_boot() {
     mount_top
     current_id=$id
     from=$(info "$id" carry_from)
+    [ -n "$from" ] || from=$(cat /.bande-first-boot)
     if [ -n "$from" ] && [ -d "$top/@system/$from" ]; then
         old=$top/@system/$from
         new=$top/@system/$id
@@ -590,6 +612,7 @@ cmd_went_back() {
 case "${1:-}" in
 prepare) shift; cmd_prepare "$@" ;;
 first-entry) cmd_first_entry "$2" ;;
+adopt) cmd_adopt "${2:-}" ;;
 before-dpkg) cmd_before_dpkg ;;
 sync-boot) cmd_sync_boot ;;
 restore) shift; cmd_restore "$@" ;;
@@ -597,5 +620,5 @@ first-boot) cmd_first_boot ;;
 list) cmd_list ;;
 went-back) cmd_went_back ;;
 at-boot) cmd_at_boot ;;
-*) die "usage: bande-system prepare|before-dpkg|sync-boot|restore <version>|first-boot|list|went-back|at-boot|first-entry <root>" ;;
+*) die "usage: bande-system prepare|before-dpkg|sync-boot|restore <version>|first-boot|list|went-back|at-boot|first-entry <root>|adopt <version>" ;;
 esac
