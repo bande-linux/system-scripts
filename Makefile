@@ -85,16 +85,6 @@ install-initramfs-tools: install
 install-debian: install install-initramfs-tools install-macsmc-battery install-udev-hwdb
 	install -dD $(DESTDIR)/etc/kernel/postinst.d
 	install -m0755 -t $(DESTDIR)/etc/kernel/postinst.d kernel/postinst.d/zz-update-unboot
-	install -dD $(DESTDIR)$(PREFIX)/sbin $(DESTDIR)$(SYSTEMD_UNIT_DIR)/emergency.service.d $(DESTDIR)$(SYSTEMD_UNIT_DIR)/rescue.service.d
-	install -dD $(DESTDIR)$(PREFIX)/lib/kernel/install.d $(DESTDIR)/etc/apt/apt.conf.d
-	install -m0755 -t $(DESTDIR)$(PREFIX)/sbin bande-system
-	install -m0644 -t $(DESTDIR)$(SYSTEMD_UNIT_DIR) boot-assessment/bande-login-ready.socket boot-assessment/bande-boot-health.service boot-assessment/bande-system-first-boot.service boot-assessment/bande-system-status.service boot-assessment/bande-system-prepare.service boot-assessment/bande-system-restore@.service
-	install -dD $(DESTDIR)$(PREFIX)/share/polkit-1/rules.d
-	install -m0644 -t $(DESTDIR)$(PREFIX)/share/polkit-1/rules.d boot-assessment/50-bande-system.rules
-	install -m0644 -t $(DESTDIR)$(SYSTEMD_UNIT_DIR)/emergency.service.d boot-assessment/bande-counted-boot.conf
-	install -m0644 -t $(DESTDIR)$(SYSTEMD_UNIT_DIR)/rescue.service.d boot-assessment/bande-counted-boot.conf
-	install -m0755 -t $(DESTDIR)$(PREFIX)/lib/kernel/install.d boot-assessment/90-bande-system.install
-	install -m0644 -t $(DESTDIR)/etc/apt/apt.conf.d boot-assessment/50-bande-system.conf
 
 uninstall:
 	rm -f $(addprefix $(DESTDIR)$(BIN_DIR)/,$(SCRIPTS))
@@ -131,13 +121,8 @@ uninstall-initramfs-tools:
 
 uninstall-debian: uninstall-initramfs-tools uninstall-macsmc-battery uninstall-udev-hwdb
 	rm -f $(DESTDIR)/etc/kernel/postinst.d/zz-update-unboot
-	rm -f $(DESTDIR)$(PREFIX)/sbin/bande-system $(DESTDIR)$(PREFIX)/lib/kernel/install.d/90-bande-system.install
-	rm -f $(DESTDIR)/etc/apt/apt.conf.d/50-bande-system.conf
-	rm -f $(addprefix $(DESTDIR)$(SYSTEMD_UNIT_DIR)/,bande-login-ready.socket bande-boot-health.service bande-system-first-boot.service bande-system-status.service bande-system-prepare.service bande-system-restore@.service)
-	rm -f $(DESTDIR)$(PREFIX)/share/polkit-1/rules.d/50-bande-system.rules
-	rm -f $(addprefix $(DESTDIR)$(SYSTEMD_UNIT_DIR)/,emergency.service.d/bande-counted-boot.conf rescue.service.d/bande-counted-boot.conf)
 
-.PHONY: install-usb-gadget clean \
+.PHONY: install-usb-gadget install-bande-system uninstall-bande-system clean \
         install \
         install-mkinitcpio \
         install-dracut \
@@ -156,6 +141,25 @@ uninstall-debian: uninstall-initramfs-tools uninstall-macsmc-battery uninstall-u
         uninstall-fedora \
         uninstall-initramfs-tools \
         uninstall-debian
+
+uninstall-bande-system:
+	rm -f $(DESTDIR)$(PREFIX)/sbin/bande-system $(DESTDIR)$(PREFIX)/lib/kernel/install.d/90-bande-system.install
+	rm -f $(DESTDIR)/etc/apt/apt.conf.d/50-bande-system.conf
+	rm -f $(addprefix $(DESTDIR)$(SYSTEMD_UNIT_DIR)/,bande-login-ready.socket bande-boot-health.service bande-system-first-boot.service bande-system-status.service bande-system-prepare.service bande-system-restore@.service)
+	rm -f $(DESTDIR)$(PREFIX)/share/polkit-1/rules.d/50-bande-system.rules
+	rm -f $(addprefix $(DESTDIR)$(SYSTEMD_UNIT_DIR)/,emergency.service.d/bande-counted-boot.conf rescue.service.d/bande-counted-boot.conf)
+
+install-bande-system:
+	install -dD $(DESTDIR)$(PREFIX)/sbin $(DESTDIR)$(SYSTEMD_UNIT_DIR)/emergency.service.d $(DESTDIR)$(SYSTEMD_UNIT_DIR)/rescue.service.d
+	install -dD $(DESTDIR)$(PREFIX)/lib/kernel/install.d $(DESTDIR)/etc/apt/apt.conf.d
+	install -m0755 -t $(DESTDIR)$(PREFIX)/sbin bande-system
+	install -m0644 -t $(DESTDIR)$(SYSTEMD_UNIT_DIR) boot-assessment/bande-login-ready.socket boot-assessment/bande-boot-health.service boot-assessment/bande-system-first-boot.service boot-assessment/bande-system-status.service boot-assessment/bande-system-prepare.service boot-assessment/bande-system-restore@.service
+	install -dD $(DESTDIR)$(PREFIX)/share/polkit-1/rules.d
+	install -m0644 -t $(DESTDIR)$(PREFIX)/share/polkit-1/rules.d boot-assessment/50-bande-system.rules
+	install -m0644 -t $(DESTDIR)$(SYSTEMD_UNIT_DIR)/emergency.service.d boot-assessment/bande-counted-boot.conf
+	install -m0644 -t $(DESTDIR)$(SYSTEMD_UNIT_DIR)/rescue.service.d boot-assessment/bande-counted-boot.conf
+	install -m0755 -t $(DESTDIR)$(PREFIX)/lib/kernel/install.d boot-assessment/90-bande-system.install
+	install -m0644 -t $(DESTDIR)/etc/apt/apt.conf.d boot-assessment/50-bande-system.conf
 
 install-usb-gadget: install
 	install -dD $(DESTDIR)$(BIN_DIR) $(DESTDIR)$(SYSTEMD_UNIT_DIR) $(DESTDIR)$(UDEV_RULES_DIR) $(DESTDIR)$(NETWORKD_DIR)

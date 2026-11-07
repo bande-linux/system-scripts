@@ -10,11 +10,19 @@ Homepage: https://github.com/bande-linux/system-scripts
 Package: bande-scripts
 Architecture: all
 Depends: ${misc:Depends}, busybox, cpio, initramfs-tools, mount
-Recommends: bande-fwextract, btrfs-progs
+Recommends: bande-fwextract
 Description: Bande Linux system scripts for Apple Silicon Macs
  Loads vendor firmware from the EFI system partition in the initramfs,
  updates firmware and the unboot image on the EFI system partition, and
  collects a diagnostic dump.
+
+Package: bande-system
+Architecture: all
+Depends: ${misc:Depends}, btrfs-progs, linux-base, mount, passwd, systemd, util-linux
+Description: System versions, boot fallback and restore on a Bande btrfs install
+ Installs updates on a copy of the system, counts boots until the login window
+ has come up, falls back to the last good version by itself and restores
+ earlier versions. It acts only on a system with the Bande btrfs layout.
 
 Package: bande-usb-gadget
 Architecture: all
