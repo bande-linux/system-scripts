@@ -10,7 +10,7 @@ Homepage: https://github.com/bande-linux/system-scripts
 Package: bande-scripts
 Architecture: all
 Depends: ${misc:Depends}, busybox, cpio, initramfs-tools, mount
-Recommends: bande-fwextract
+Recommends: bande-fwextract, btrfs-progs
 Description: Bande Linux system scripts for Apple Silicon Macs
  Loads vendor firmware from the EFI system partition in the initramfs,
  updates firmware and the unboot image on the EFI system partition, and

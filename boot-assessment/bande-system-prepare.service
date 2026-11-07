@@ -1,0 +1,9 @@
+[Unit]
+Description=Install the system update on a copy of the system
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/bande-system prepare
+Nice=10
+IOSchedulingClass=idle

@@ -1,0 +1,5 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+
+[ "$KERNEL_INSTALL_LAYOUT" = bande ] || exit 0
+exec bande-system sync-boot

@@ -1,0 +1,20 @@
+[Unit]
+Description=Wait for the login window before calling this boot good
+ConditionPathExists=/sys/firmware/efi/efivars/LoaderBootCountPath-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f
+DefaultDependencies=no
+IgnoreOnIsolate=yes
+Requires=bande-login-ready.socket
+After=bande-login-ready.socket
+Before=boot-complete.target
+FailureAction=reboot-force
+
+[Service]
+Type=oneshot
+StandardInput=socket
+StandardOutput=journal
+ExecStart=/usr/bin/head -c 1
+ExecStartPost=/usr/bin/touch /run/bande/login-came-up
+TimeoutStartSec=5min
+
+[Install]
+RequiredBy=boot-complete.target

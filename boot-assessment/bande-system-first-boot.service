@@ -1,0 +1,14 @@
+[Unit]
+Description=Bring accounts and connections over to this system version
+DefaultDependencies=no
+ConditionPathExists=/.bande-first-boot
+After=systemd-remount-fs.service
+Before=systemd-sysusers.service sysinit.target shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/bande-system first-boot
+
+[Install]
+WantedBy=sysinit.target

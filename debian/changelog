@@ -1,3 +1,10 @@
+bande-scripts (0.1.2) unstable; urgency=medium
+
+  * bande-system: system versions on a btrfs install, updates on a copy,
+    boot counting with a login window check, fallback and restore.
+
+ -- Mikael Hug <mikaelhug@gmail.com>  Sat, 07 Nov 2026 13:30:00 +0100
+
 bande-scripts (0.1.1) unstable; urgency=medium
 
   * initramfs-tools: load xhci_pci after the vendor firmware.

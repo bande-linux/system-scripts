@@ -1,0 +1,11 @@
+[Unit]
+Description=Tell the desktop about system versions and whether this boot went back
+After=local-fs.target bande-system-first-boot.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/bande-system at-boot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

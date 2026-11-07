@@ -1,0 +1,6 @@
+[Unit]
+Description=Bring back system version %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/bande-system restore %i

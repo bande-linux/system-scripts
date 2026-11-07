@@ -1,0 +1,601 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+
+set -eu
+
+TRIES=3
+ROOT_FLAGS=noatime,compress=zstd:1
+KEEP=4
+MIN_FREE_PERCENT=10
+FIRST_HUMAN_UID=1000
+NOBODY_UID=65534
+
+: "${BANDE_ESP:=/boot/efi}"
+state=/run/bande-system
+public=/run/bande
+top=$state/top
+chroot_mounted=
+
+die() {
+    echo "bande-system: $*" >&2
+    exit 1
+}
+
+running_id() {
+    fsroot=$(findmnt -no FSROOT / 2>/dev/null) || return 1
+    case "$fsroot" in
+    /@system/*) echo "${fsroot#/@system/}" ;;
+    *) return 1 ;;
+    esac
+}
+
+root_device() {
+    if [ -n "${BANDE_ROOT_DEVICE:-}" ]; then
+        echo "$BANDE_ROOT_DEVICE"
+    else
+        findmnt -no SOURCE / | sed 's/\[.*//'
+    fi
+}
+
+mount_top() {
+    mkdir -p "$top"
+    mountpoint -q "$top" || mount -o subvolid=5,noatime,compress=zstd:1 "$(root_device)" "$top"
+    [ -d "$top/@system" ] || die "$(root_device) does not have the @system layout"
+}
+
+mount_esp() {
+    mountpoint -q "$BANDE_ESP" && return 0
+    mount "$BANDE_ESP" 2>/dev/null || mountpoint -q "$BANDE_ESP" || die "the EFI system partition is not at $BANDE_ESP"
+}
+
+publish() {
+    mountpoint -q "$top" || return 0
+    mkdir -p "$public"
+    list_versions > "$public/versions.new"
+    chmod 644 "$public/versions.new"
+    mv -f "$public/versions.new" "$public/versions"
+}
+
+cleanup_mounts() {
+    publish || true
+    if [ -n "$chroot_mounted" ]; then
+        umount -R -l "$chroot_mounted" 2>/dev/null || true
+        chroot_mounted=
+    fi
+    if mountpoint -q "$top"; then
+        umount "$top" 2>/dev/null || true
+    fi
+}
+
+take_lock() {
+    mkdir -p "$state"
+    exec 9>"$state/lock"
+    if ! flock -n 9; then
+        echo "bande-system: waiting for another update step to finish" >&2
+        flock 9
+    fi
+    trap cleanup_mounts EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+}
+
+version_ids() {
+    for path in "$top"/@system/*; do
+        id=${path##*/}
+        case "$id" in
+        *[!0-9]*) ;;
+        *) [ -d "$path" ] && echo "$id" ;;
+        esac
+    done | sort -n
+}
+
+next_id() {
+    last=$(version_ids | tail -n 1)
+    echo $((${last:-0} + 1))
+}
+
+entries() {
+    for path in "$BANDE_ESP"/loader/entries/bande-*.conf; do
+        [ -e "$path" ] && echo "$path"
+    done
+    return 0
+}
+
+entry_rank() {
+    name=${1##*/}
+    name=${name#bande-}
+    name=${name%.conf}
+    echo "${name%%+*}"
+}
+
+entry_of() {
+    for path in $(entries); do
+        if grep -q "subvol=@system/$1," "$path"; then
+            echo "$path"
+            return 0
+        fi
+    done
+    return 1
+}
+
+next_rank() {
+    last=$(entries | while read -r path; do entry_rank "$path"; done | sort -n | tail -n 1)
+    echo $((${last:-0} + 1))
+}
+
+entry_state() {
+    case "${1##*/}" in
+    *+0-*.conf) echo failed ;;
+    *+*-*.conf) echo trying ;;
+    *+*.conf) echo pending ;;
+    *) echo good ;;
+    esac
+}
+
+info() {
+    sed -n "s/^$2=//p" "$top/@system/$1.info" 2>/dev/null | tail -n 1
+}
+
+set_info() {
+    file=$top/@system/$1.info
+    {
+        grep -v "^$2=" "$file" 2>/dev/null || true
+        echo "$2=$3"
+    } > "$file.new"
+    mv -f "$file.new" "$file"
+}
+
+newest_kernel() {
+    versions=$(cd "$1/boot" && ls vmlinuz-* 2>/dev/null | sed 's/^vmlinuz-//') || true
+    [ -n "$versions" ] || return 1
+    newest=$(echo "$versions" | linux-version sort | tail -n 1)
+    [ -e "$1/boot/initrd.img-$newest" ] || return 1
+    echo "$newest"
+}
+
+store_boot_file() {
+    hash=$(sha256sum "$1" | cut -c1-32)
+    dir=$BANDE_ESP/bande/boot/$hash
+    if [ ! -e "$dir/$2" ]; then
+        mkdir -p "$dir"
+        cp "$1" "$dir/$2.new"
+        sync -f "$dir/$2.new"
+        mv -f "$dir/$2.new" "$dir/$2"
+    fi
+    echo "/bande/boot/$hash/$2"
+}
+
+write_entry() {
+    id=$1
+    file=$2
+    root=$top/@system/$id
+    sync -f "$root"
+    kernel=$(newest_kernel "$root") || die "version $id has no kernel and initrd"
+    linux=$(store_boot_file "$root/boot/vmlinuz-$kernel" linux)
+    initrd=$(store_boot_file "$root/boot/initrd.img-$kernel" initrd)
+    cmdline=$(cat "$root/etc/kernel/cmdline")
+    created=$(date -u -d "@$(info "$id" created)" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "$id")
+    mkdir -p "${file%/*}"
+    cat > "$file.new" <<EOT
+title Bande $created
+version $kernel
+linux $linux
+initrd $initrd
+options $cmdline rootflags=subvol=@system/$id,$ROOT_FLAGS panic=10
+EOT
+    sync -f "$file.new"
+    mv -f "$file.new" "$file"
+    sync -f "$file"
+}
+
+clone_version() {
+    from=$1
+    why=$2
+    id=$(next_id)
+    btrfs -q subvolume snapshot "$top/@system/$from" "$top/@system/$id"
+    {
+        echo "created=$(date +%s)"
+        echo "why=$why"
+        echo "base=$from"
+        echo "carry_from=$from"
+    } > "$top/@system/$id.info"
+    : > "$top/@system/$id/.bande-first-boot"
+    sync -f "$top/@system"
+    echo "$id"
+}
+
+delete_version() {
+    id=$1
+    path=$(entry_of "$id") && rm -f "$path"
+    if [ -d "$top/@system/$id" ]; then
+        btrfs -q subvolume delete "$top/@system/$id" || return 1
+    fi
+    rm -f "$top/@system/$id.info" "$top/@system/$id.changes"
+}
+
+in_chroot() {
+    env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root LC_ALL=C.UTF-8 \
+        DEBIAN_FRONTEND=noninteractive BANDE_SYSTEM_PREPARING=1 UNBOOT_UPDATE_DISABLED=1 \
+        chroot "$chroot_mounted" "$@"
+}
+
+mount_chroot() {
+    root=$1
+    chroot_mounted=$root
+    mount -t proc proc "$root/proc"
+    mount -t sysfs sys "$root/sys"
+    mount --rbind /dev "$root/dev"
+    mount --make-rslave "$root/dev"
+    mount -t tmpfs -o mode=0755 tmpfs "$root/run"
+    mount -t tmpfs -o mode=1777 tmpfs "$root/tmp"
+    mount --bind /var/cache "$root/var/cache"
+    mount --bind /var/log "$root/var/log"
+    if [ -d /sys/firmware/efi/efivars ] && mountpoint -q /sys/firmware/efi/efivars; then
+        mount -t efivarfs -o ro efivarfs "$root/sys/firmware/efi/efivars" 2>/dev/null || true
+    fi
+    mkdir -p "$root/run/systemd/resolve"
+    [ -e /run/systemd/resolve/stub-resolv.conf ] &&
+        cp /run/systemd/resolve/stub-resolv.conf /run/systemd/resolve/resolv.conf "$root/run/systemd/resolve/"
+    printf '#!/bin/sh\nexit 101\n' > "$root/usr/sbin/policy-rc.d"
+    chmod 755 "$root/usr/sbin/policy-rc.d"
+}
+
+unmount_chroot() {
+    root=$chroot_mounted
+    rm -f "$root/usr/sbin/policy-rc.d"
+    umount -R -l "$root"/proc "$root"/sys "$root"/dev "$root"/run "$root"/tmp "$root"/var/cache "$root"/var/log
+    chroot_mounted=
+}
+
+discard_unfinished() {
+    for id in $(version_ids); do
+        entry_of "$id" >/dev/null && continue
+        case "$(info "$id" why)" in
+        "" | preparing) delete_version "$id" ;;
+        esac
+    done
+}
+
+restore_pending() {
+    for path in $(entries); do
+        [ "$(entry_state "$path")" = pending ] || continue
+        id=$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")
+        [ "$(info "$id" why)" != restore ] || return 0
+    done
+    return 1
+}
+
+discard_pending() {
+    for path in $(entries); do
+        [ "$(entry_state "$path")" = pending ] || continue
+        id=$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")
+        [ "$(info "$id" why)" = update ] || continue
+        echo "bande-system: discarding the prepared update, it no longer matches this system" >&2
+        delete_version "$id"
+    done
+}
+
+clean_boot_files() {
+    [ -d "$BANDE_ESP/bande/boot" ] || return 0
+    used=$(cat $(entries) /dev/null | sed -n 's/^\(linux\|initrd\) \/bande\/boot\/\([^/]*\)\/.*/\2/p')
+    for dir in "$BANDE_ESP"/bande/boot/*; do
+        [ -d "$dir" ] || continue
+        echo "$used" | grep -qx "${dir##*/}" || rm -rf "$dir"
+    done
+}
+
+free_percent() {
+    df --output=pcent "$top" | tail -n 1 | tr -d ' %' | awk '{ print 100 - $1 }'
+}
+
+clean_versions() {
+    running=$(running_id || true)
+    failed=
+    keep=$KEEP
+    [ "$(free_percent)" -ge "$MIN_FREE_PERCENT" ] || keep=1
+    good=$(for path in $(entries); do
+        id=$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")
+        [ "$(entry_state "$path")" = good ] && echo "$(entry_rank "$path") $id"
+    done | sort -n | tail -n 1 | cut -d' ' -f2)
+    count=0
+    for id in $(version_ids | sort -rn); do
+        [ "$id" = "$running" ] && continue
+        [ "$id" = "$good" ] && continue
+        path=$(entry_of "$id" || true)
+        if [ -n "$path" ] && [ "$(entry_state "$path")" = pending ]; then
+            continue
+        fi
+        if [ -n "$path" ] && [ "$(entry_state "$path")" = failed ]; then
+            failed="$failed $id"
+            continue
+        fi
+        count=$((count + 1))
+        [ "$count" -le "$keep" ] && continue
+        delete_version "$id" || echo "bande-system: could not delete version $id" >&2
+    done
+    for id in $failed; do
+        delete_version "$id" || echo "bande-system: could not delete version $id" >&2
+    done
+    clean_boot_files
+}
+
+activate() {
+    write_entry "$1" "$BANDE_ESP/loader/entries/bande-$(next_rank)+$TRIES.conf"
+}
+
+cmd_first_entry() {
+    root=$(realpath "$1")
+    top=$(mktemp -d)
+    mkdir "$top/@system"
+    ln -s "$root" "$top/@system/1"
+    write_entry 1 "$BANDE_ESP/loader/entries/bande-1.conf"
+    rm -rf "$top"
+}
+
+cmd_prepare() {
+    running=$(running_id) || die "this system does not have the @system layout"
+    take_lock
+    mount_top
+    mount_esp
+    if restore_pending; then
+        die "restart first: an earlier version is about to come back"
+    fi
+    discard_unfinished
+    discard_pending
+    clean_versions
+    id=$(clone_version "$running" preparing)
+    root=$top/@system/$id
+    mount_chroot "$root"
+    if ! in_chroot apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@" full-upgrade >&2 ||
+        [ -n "$(in_chroot dpkg --audit)" ] || ! newest_kernel "$root" >/dev/null; then
+        unmount_chroot
+        delete_version "$id"
+        die "the update could not be installed; nothing has changed"
+    fi
+    in_chroot dpkg-query -W -f '${Package} ${Version}\n' | LC_ALL=C sort > "$state/after"
+    unmount_chroot
+    dpkg-query -W -f '${Package} ${Version}\n' | LC_ALL=C sort | LC_ALL=C comm -13 - "$state/after" > "$top/@system/$id.changes"
+    update_boot_image "$id"
+    set_info "$id" why update
+    activate "$id"
+    echo "$id"
+}
+
+cmd_before_dpkg() {
+    [ -z "${BANDE_SYSTEM_PREPARING:-}" ] || exit 0
+    running=$(running_id) || exit 0
+    take_lock
+    mount_top
+    mount_esp
+    if restore_pending; then
+        return 0
+    fi
+    discard_pending
+    clean_versions
+    current=$(entry_of "$running" || true)
+    copy=$(clone_version "$running" before-change)
+    write_entry "$running" "$BANDE_ESP/loader/entries/bande-$(next_rank)+$TRIES.conf"
+    [ -n "$current" ] || return 0
+    if [ "$(entry_state "$current")" = good ]; then
+        write_entry "$copy" "$current"
+    else
+        rm -f "$current"
+    fi
+}
+
+cmd_sync_boot() {
+    [ -z "${BANDE_SYSTEM_PREPARING:-}" ] || exit 0
+    running=$(running_id) || exit 0
+    take_lock
+    mount_top
+    mount_esp
+    path=$(entry_of "$running") || path=$BANDE_ESP/loader/entries/bande-$(next_rank)+$TRIES.conf
+    write_entry "$running" "$path"
+    clean_boot_files
+}
+
+cmd_restore() {
+    [ $# -eq 1 ] || die "usage: bande-system restore <version>"
+    from=$1
+    take_lock
+    mount_top
+    mount_esp
+    [ -d "$top/@system/$from" ] || die "there is no version $from"
+    running=$(running_id || last_run)
+    for path in $(entries); do
+        [ "$(entry_state "$path")" != pending ] || delete_version "$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")"
+    done
+    id=$(clone_version "$from" restore)
+    [ -z "$running" ] || set_info "$id" carry_from "$running"
+    update_boot_image "$id"
+    activate "$id"
+    echo "$id"
+}
+
+update_boot_image() {
+    root=$top/@system/$1
+    [ -e "$root/usr/lib/unboot/unboot.bin" ] || return 0
+    kernel=$(newest_kernel "$root") || return 0
+    for dtbs in "$root/usr/lib/modules/$kernel/dtb" "$root/usr/lib/linux-image-$kernel"; do
+        [ -d "$dtbs" ] && break
+    done
+    SOURCE=$root/usr/lib/unboot/ UNBOOT=$root/usr/lib/unboot/unboot.bin U_BOOT=$root/usr/lib/unboot/u-boot-nodtb.bin \
+        CONFIG=$root/etc/unboot.conf TARGET=$BANDE_ESP/unboot/boot.bin DTBS=$dtbs \
+        update-unboot >&2 || echo "bande-system: could not update the boot image" >&2
+}
+
+last_run() {
+    for path in $(entries | while read -r path; do echo "$(entry_rank "$path") $path"; done | sort -rn | cut -d' ' -f2); do
+        [ "$(entry_state "$path")" = good ] || continue
+        sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path"
+        return 0
+    done
+    return 0
+}
+
+human_or_root() {
+    awk -F: -v first="$FIRST_HUMAN_UID" -v nobody="$NOBODY_UID" '$3 >= first && $3 != nobody { print $1 } END { print "root" }' "$1"
+}
+
+merge_passwd() {
+    awk -F: -v first="$FIRST_HUMAN_UID" -v nobody="$NOBODY_UID" \
+        '($3 < first || $3 == nobody) && $1 != "root"' "$1/etc/passwd" > "$state/passwd"
+    awk -F: -v first="$FIRST_HUMAN_UID" -v nobody="$NOBODY_UID" \
+        '$1 == "root" || ($3 >= first && $3 != nobody)' "$2/etc/passwd" >> "$state/passwd"
+    replace "$state/passwd" /etc/passwd
+}
+
+merge_shadow() {
+    human_or_root "$2/etc/passwd" > "$state/humans"
+    awk -F: 'NR == FNR { humans[$1] = 1; next } !($1 in humans)' "$state/humans" "$1/etc/shadow" > "$state/shadow"
+    awk -F: 'NR == FNR { humans[$1] = 1; next } $1 in humans' "$state/humans" "$2/etc/shadow" >> "$state/shadow"
+    replace "$state/shadow" /etc/shadow
+}
+
+merge_group() {
+    human_or_root "$2/etc/passwd" > "$state/humans"
+    awk -F: -v OFS=: -v first="$FIRST_HUMAN_UID" -v nobody="$NOBODY_UID" '
+        FILENAME == ARGV[1] { humans[$1] = 1; next }
+        FILENAME == ARGV[2] {
+            old[$1] = $0
+            gid[$1] = $3
+            n = split($4, members, ",")
+            kept = ""
+            for (i = 1; i <= n; i++) if (members[i] in humans) kept = kept (kept == "" ? "" : ",") members[i]
+            carried[$1] = kept
+            next
+        }
+        {
+            seen[$1] = 1
+            n = split($4, members, ",")
+            list = ""
+            for (i = 1; i <= n; i++) if (!(members[i] in humans)) list = list (list == "" ? "" : ",") members[i]
+            if (carried[$1] != "") list = list (list == "" ? "" : ",") carried[$1]
+            $4 = list
+            print
+        }
+        END {
+            for (name in old) if (!(name in seen) && gid[name] >= first && gid[name] != nobody) print old[name]
+        }
+    ' "$state/humans" "$2/etc/group" "$1/etc/group" > "$state/group"
+    replace "$state/group" /etc/group
+    grpconv
+}
+
+replace() {
+    target=$top/@system/$current_id$2
+    cat "$1" > "$target.bande-new"
+    chmod --reference="$target" "$target.bande-new"
+    chown --reference="$target" "$target.bande-new"
+    mv -f "$target.bande-new" "$target"
+}
+
+carry_path() {
+    source=$1/$3
+    target=$2/$3
+    [ -e "$source" ] || [ -L "$source" ] || return 0
+    rm -rf "$target"
+    mkdir -p "${target%/*}"
+    cp -a --reflink=auto "$source" "$target"
+}
+
+cmd_first_boot() {
+    id=$(running_id) || exit 0
+    [ -e /.bande-first-boot ] || exit 0
+    take_lock
+    mount_top
+    current_id=$id
+    from=$(info "$id" carry_from)
+    if [ -n "$from" ] && [ -d "$top/@system/$from" ]; then
+        old=$top/@system/$from
+        new=$top/@system/$id
+        merge_passwd "$new" "$old"
+        merge_shadow "$new" "$old"
+        merge_group "$new" "$old"
+        for path in etc/NetworkManager/system-connections var/lib/bluetooth var/lib/AccountsService \
+            etc/hostname etc/hosts etc/timezone etc/localtime etc/default/locale etc/locale.conf \
+            etc/default/keyboard etc/vconsole.conf etc/subuid etc/subgid; do
+            carry_path "$old" "$new" "$path"
+        done
+        rm -f "$new"/etc/ssh/ssh_host_*
+        for key in "$old"/etc/ssh/ssh_host_*; do
+            [ -e "$key" ] && cp -a "$key" "$new/etc/ssh/"
+        done
+    fi
+    rm -f /.bande-first-boot
+}
+
+list_versions() {
+    running=$(running_id || true)
+    for id in $(version_ids | sort -rn); do
+        why=$(info "$id" why)
+        [ -n "$why" ] && [ "$why" != preparing ] || continue
+        path=$(entry_of "$id" || true)
+        condition=none
+        [ -z "$path" ] || condition=$(entry_state "$path")
+        marker=
+        [ "$id" != "$running" ] || marker=running
+        changes=$top/@system/$id.changes
+        count=0
+        names=
+        if [ -s "$changes" ]; then
+            count=$(wc -l < "$changes")
+            names=$(cut -d' ' -f1 "$changes" | head -n 5 | paste -sd, -)
+        fi
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$id" "$(info "$id" created)" "$why" "$condition" "$marker" "$count" "$names"
+    done
+}
+
+cmd_list() {
+    take_lock
+    mount_top
+    mount_esp
+    list_versions
+}
+
+cmd_at_boot() {
+    running=$(running_id) || exit 0
+    take_lock
+    mount_top
+    mount_esp
+    went_back "$running" > "$state/went-back"
+    if [ -s "$state/went-back" ]; then
+        mkdir -p "$public"
+        cat "$state/went-back" >> "$public/went-back"
+        chmod 644 "$public/went-back"
+    fi
+}
+
+went_back() {
+    mine=$(entry_of "$1") || return 0
+    rank=$(entry_rank "$mine")
+    for path in $(entries); do
+        [ "$(entry_state "$path")" = failed ] || continue
+        [ "$(entry_rank "$path")" -gt "$rank" ] || continue
+        id=$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")
+        [ "$(info "$id" reported)" = 1 ] && continue
+        set_info "$id" reported 1
+        printf '%s\t%s\n' "$id" "$(info "$id" created)"
+    done
+}
+
+cmd_went_back() {
+    running=$(running_id) || exit 0
+    take_lock
+    mount_top
+    mount_esp
+    went_back "$running"
+}
+
+case "${1:-}" in
+prepare) shift; cmd_prepare "$@" ;;
+first-entry) cmd_first_entry "$2" ;;
+before-dpkg) cmd_before_dpkg ;;
+sync-boot) cmd_sync_boot ;;
+restore) shift; cmd_restore "$@" ;;
+first-boot) cmd_first_boot ;;
+list) cmd_list ;;
+went-back) cmd_went_back ;;
+at-boot) cmd_at_boot ;;
+*) die "usage: bande-system prepare|before-dpkg|sync-boot|restore <version>|first-boot|list|went-back|at-boot|first-entry <root>" ;;
+esac
