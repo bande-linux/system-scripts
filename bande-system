@@ -206,6 +206,7 @@ clone_version() {
 
 delete_version() {
     id=$1
+    [ "$id" != "$(running_id || true)" ] || die "version $id is running, it cannot be deleted"
     path=$(entry_of "$id") && rm -f "$path"
     if [ -d "$top/@system/$id" ]; then
         btrfs -q subvolume delete "$top/@system/$id" || return 1
@@ -270,6 +271,7 @@ discard_pending() {
         [ "$(entry_state "$path")" = pending ] || continue
         id=$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")
         [ "$(info "$id" why)" = update ] || continue
+        [ "$id" != "$(running_id || true)" ] || continue
         echo "bande-system: discarding the prepared update, it no longer matches this system" >&2
         delete_version "$id"
     done
