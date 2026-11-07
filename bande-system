@@ -261,6 +261,7 @@ restore_pending() {
     for path in $(entries); do
         [ "$(entry_state "$path")" = pending ] || continue
         id=$(sed -n 's/.*subvol=@system\/\([0-9]*\),.*/\1/p' "$path")
+        [ "$id" != "$(running_id || true)" ] || continue
         [ "$(info "$id" why)" != restore ] || return 0
     done
     return 1
