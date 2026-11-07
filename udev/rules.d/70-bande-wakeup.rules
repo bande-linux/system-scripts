@@ -1,0 +1,10 @@
+# Wake from sleep with any USB keyboard or mouse, as on macOS. usbhid only enables wakeup for boot
+# keyboards. Hubs must pass the wake on, so external ones are included; root hubs are not, since
+# their setting only adds waking on plugging and unplugging. power/wakeup only appears once the
+# device is configured, so also match bind.
+ACTION!="add|bind", GOTO="bande_wakeup_end"
+SUBSYSTEM!="usb", GOTO="bande_wakeup_end"
+ENV{DEVTYPE}!="usb_device", GOTO="bande_wakeup_end"
+KERNEL!="[0-9]*-*", GOTO="bande_wakeup_end"
+ENV{ID_USB_INTERFACES}=="*:03????:*|*:09????:*", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+LABEL="bande_wakeup_end"
