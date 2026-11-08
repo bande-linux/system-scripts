@@ -6,8 +6,8 @@ Bande, released by `v*` tags:
 
 - `bande-scripts`: firmware loading in the initramfs (`initramfs-tools/`), firmware and
   bootloader updates on the EFI system partition (`bande-fwupdate`, `update-unboot` with its
-  kernel hook `kernel/postinst.d/zz-update-unboot`), battery charge limits (`macsmc-battery/`),
-  and a diagnostic dump (`bande-diagnose`).
+  kernel hook `kernel/postinst.d/zz-update-unboot`) and battery charge limits (`macsmc-battery/`).
+  The diagnostic dump `bande-diagnose` comes with `bande-reporter` in the desktop.
 - `bande-system`: system versions on a btrfs install, for every architecture (`bande-system` with
   `boot-assessment/`: updates on a copy, boot counting, fallback and restore). It acts only on a
   system with that layout.

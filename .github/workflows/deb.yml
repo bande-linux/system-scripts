@@ -44,8 +44,7 @@ jobs:
             grep -qx scripts/init-premount/bande /tmp/list
             grep -qx scripts/init-bottom/bande /tmp/list
             grep -qx usr/share/bande-scripts/functions.sh /tmp/list
-            grep -qx usr/lib/firmware/vendor /tmp/list
-            bande-diagnose - | sed -n "/## Package versions/,/^\$/p"'
+            grep -qx usr/lib/firmware/vendor /tmp/list'
 
       - uses: actions/upload-artifact@v7
         with:

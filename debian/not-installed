@@ -1,4 +1,3 @@
-usr/bin/bande-diagnose
 usr/bin/bande-fwupdate
 usr/bin/update-unboot
 usr/share/bande-scripts/functions.sh
