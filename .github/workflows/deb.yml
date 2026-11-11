@@ -13,10 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Build the package on Debian testing
+      - name: Build the package on Debian forky
         run: |
           mkdir -p out
-          git archive --prefix=src/ HEAD | docker run --rm -i debian:testing sh -euc '
+          git archive --prefix=src/ HEAD | docker run --rm -i debian:forky sh -euc '
             apt-get update -qq
             apt-get install -y -qq --no-install-recommends build-essential debhelper lintian >/dev/null
             tar -x -C /tmp
@@ -26,9 +26,9 @@ jobs:
             cd /tmp && tar -c *.deb' | tar -x -C out
           ls -l out
 
-      - name: Install it on Debian testing and build an initramfs
+      - name: Install it on Debian forky and build an initramfs
         run: |
-          tar -c -C out . | docker run --rm -i debian:testing sh -euc '
+          tar -c -C out . | docker run --rm -i debian:forky sh -euc '
             mkdir /tmp/debs
             tar -x -C /tmp/debs
             apt-get update -qq
